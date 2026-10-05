@@ -1,0 +1,582 @@
+import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+
+async function sceneGeometry(page: Page) {
+  return page.locator(".inspiration-scene").evaluate((scene) => {
+    const sticky = scene.querySelector<HTMLElement>(".inspiration-sticky")!;
+    const r = scene.getBoundingClientRect();
+    return {
+      top: r.top + scrollY,
+      travel: (scene as HTMLElement).offsetHeight - sticky.offsetHeight,
+    };
+  });
+}
+async function scenePaint(page: Page) {
+  return page.locator(".inspiration-scene").evaluate((scene) => {
+    const sticky = scene.querySelector<HTMLElement>(".inspiration-sticky")!;
+    const heading = scene.querySelector("h2")!.getBoundingClientRect();
+    const steps = scene.querySelector(".scene-steps")!.getBoundingClientRect();
+    return {
+      position: getComputedStyle(sticky).position,
+      top: sticky.getBoundingClientRect().top,
+      bottom: sticky.getBoundingClientRect().bottom,
+      headingTop: heading.top,
+      stepsTop: steps.top,
+      visible: [...scene.querySelectorAll<HTMLElement>(".inspiration-slide")]
+        .filter((el) => {
+          const style = getComputedStyle(el);
+          if (style.visibility !== "visible" || Number(style.opacity) <= 0.95)
+            return false;
+          if (!scene.hasAttribute("data-scene-ready")) return true;
+          const image = el.querySelector(".craft-art")!;
+          const imageStyle = getComputedStyle(image);
+          const reveal = Number(imageStyle.getPropertyValue("--scene-reveal"));
+          return (
+            el.dataset.active === "true" &&
+            reveal >= 0.99 &&
+            (imageStyle.clipPath === "none" ||
+              !/[1-9]/.test(imageStyle.clipPath))
+          );
+        })
+        .map((el) => el.querySelector("figcaption")!.textContent),
+      current: scene.querySelector(".scene-step[aria-current]")?.textContent,
+    };
+  });
+}
+
+test("a fresh 1440×660 scene fits and renders the same sticky as after resizing", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 660 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  await expect
+    .poll(async () => (await scenePaint(page)).position)
+    .toBe("sticky");
+  const geometry = await sceneGeometry(page);
+  await page.evaluate(
+    ({ top, travel }) =>
+      scrollTo({ top: top + travel * 0.48, behavior: "instant" }),
+    geometry,
+  );
+  await expect
+    .poll(async () => (await scenePaint(page)).visible)
+    .toEqual(["Detalles que brillan · ilustración"]);
+  const fresh = await scenePaint(page);
+  expect(fresh.top).toBeCloseTo(660 * 0.04, 0);
+  expect(fresh.bottom).toBeLessThan(660);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(100);
+  await page.setViewportSize({ width: 1440, height: 660 });
+  await expect
+    .poll(async () => (await scenePaint(page)).position)
+    .toBe("sticky");
+  expect((await scenePaint(page)).bottom).toBeLessThan(660);
+});
+
+test("the rendered scene holds title and steps and reverses its visible image", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.goto("/");
+  await expect
+    .poll(async () => (await scenePaint(page)).position)
+    .toBe("sticky");
+  const geometry = await sceneGeometry(page);
+  const readings = [];
+  for (const [ratio, stage, caption] of [
+    [0.08, "Pieza", "Formas orgánicas · pieza conceptual"],
+    [0.48, "Detalle", "Detalles que brillan · ilustración"],
+    [0.9, "Manos", "Manos que crean · esquema de encuadre"],
+    [0.48, "Detalle", "Detalles que brillan · ilustración"],
+    [0.08, "Pieza", "Formas orgánicas · pieza conceptual"],
+  ] as const) {
+    await page.evaluate(
+      ({ top, travel, ratio }) =>
+        scrollTo({ top: top + travel * ratio, behavior: "instant" }),
+      { ...geometry, ratio },
+    );
+    await expect
+      .poll(async () => (await scenePaint(page)).visible)
+      .toEqual([caption]);
+    const paint = await scenePaint(page);
+    expect(paint.current).toContain(stage);
+    expect(paint.top).toBeCloseTo(36, 0);
+    expect(paint.bottom).toBeLessThan(900);
+    readings.push(paint);
+  }
+  expect(
+    Math.max(...readings.map((r) => r.headingTop)) -
+      Math.min(...readings.map((r) => r.headingTop)),
+  ).toBeLessThan(1);
+  expect(
+    Math.max(...readings.map((r) => r.stepsTop)) -
+      Math.min(...readings.map((r) => r.stepsTop)),
+  ).toBeLessThan(1);
+});
+
+test("stems draw their curves and leaves unfold and retract with the painted length", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const branch = page.locator('.branch-1440[data-branch="1"]');
+  const read = () =>
+    branch.evaluate((el) => {
+      const stem = el.querySelector<SVGPathElement>("[data-stem]")!;
+      const length = stem.getTotalLength();
+      const offset = parseFloat(getComputedStyle(stem).strokeDashoffset);
+      const painted = length - offset;
+      return {
+        length,
+        offset,
+        painted,
+        leaves: [...el.querySelectorAll<SVGElement>("[data-leaf]")].map(
+          (leaf) => {
+            const x = Number(leaf.dataset.attachX),
+              y = Number(leaf.dataset.attachY);
+            let distance = Infinity,
+              attachment = 0;
+            // Independent finer sampling compares the rendered stroke endpoint to each leaf.
+            for (let i = 0; i <= 640; i++) {
+              const point = stem.getPointAtLength((length * i) / 640);
+              const d = Math.hypot(point.x - x, point.y - y);
+              if (d < distance) {
+                distance = d;
+                attachment = (length * i) / 640;
+              }
+            }
+            return {
+              opacity: Number(getComputedStyle(leaf).opacity),
+              attachment,
+            };
+          },
+        ),
+      };
+    });
+  await expect.poll(async () => (await read()).offset).toBeGreaterThan(1600);
+  const before = await read();
+  expect(before.leaves.every((l) => l.opacity === 0)).toBe(true);
+  const bounds = await branch.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return { top: r.top + scrollY, height: r.height };
+  });
+  const counts = [];
+  for (const ratio of [0.25, 0.6, 1.03, 0.6, 0.25, 0]) {
+    await page.evaluate(
+      ({ top, height, ratio }) =>
+        scrollTo({
+          top: top - innerHeight * 0.95 + ratio * (height + innerHeight * 0.83),
+          behavior: "instant",
+        }),
+      { ...bounds, ratio },
+    );
+    await expect
+      .poll(async () => (await read()).painted)
+      .toBeCloseTo(before.length * Math.min(1, ratio), -1);
+    await page.waitForTimeout(240);
+    const state = await read();
+    expect(state.painted / state.length).toBeCloseTo(Math.min(1, ratio), 2);
+    for (const leaf of state.leaves) {
+      if (leaf.attachment < state.painted - state.length * 0.075)
+        expect(leaf.opacity).toBe(1);
+      if (leaf.attachment > state.painted + state.length * 0.015)
+        expect(leaf.opacity).toBe(0);
+    }
+    counts.push(state.leaves.filter((l) => l.opacity === 1).length);
+  }
+  expect(counts[1]).toBeGreaterThan(counts[0]);
+  expect(counts[2]).toBe(before.leaves.length);
+  expect(counts[3]).toBe(counts[1]);
+  expect(counts[4]).toBe(counts[0]);
+  expect(counts[5]).toBe(0);
+  await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+  await page.waitForTimeout(250);
+  expect((await read()).offset).toBeCloseTo(before.length, 0);
+});
+
+test("a media API initialization failure preserves the page and complete rendered motifs", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      if (query === "(prefers-reduced-motion: reduce)")
+        throw new Error("synthetic media failure");
+      return original(query);
+    };
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect
+    .poll(async () => (await scenePaint(page)).position)
+    .toBe("static");
+  const state = await page
+    .locator(".branch-1440")
+    .first()
+    .evaluate((el) => ({
+      offset: getComputedStyle(el.querySelector("[data-stem]")!)
+        .strokeDashoffset,
+      leaves: [...el.querySelectorAll("[data-leaf]")].map(
+        (leaf) => getComputedStyle(leaf).opacity,
+      ),
+    }));
+  expect(parseFloat(state.offset)).toBe(0);
+  expect(state.leaves.every((opacity) => opacity === "1")).toBe(true);
+  expect((await scenePaint(page)).visible).toHaveLength(3);
+});
+
+test("menu, FAQ, material disclosure and late image changes move downstream branches by the content delta", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator(".ar-site")).toHaveAttribute(
+    "data-motion-ready",
+    "",
+  );
+  const position = (index: number) =>
+    page.locator(`.branch-390[data-branch="${index}"]`).evaluate((el) => {
+      const stem = el.querySelector<SVGPathElement>("[data-stem]")!;
+      return {
+        top: el.getBoundingClientRect().top + scrollY,
+        offset: parseFloat(getComputedStyle(stem).strokeDashoffset),
+      };
+    });
+  const beforeMenu = await position(1);
+  await page.locator(".mobile-menu summary").click();
+  await expect
+    .poll(async () => (await position(1)).top)
+    .toBeGreaterThan(beforeMenu.top + 300);
+  const menuOpen = await position(1);
+  await page.locator(".mobile-menu summary").click();
+  await expect
+    .poll(async () => (await position(1)).top)
+    .toBeCloseTo(beforeMenu.top, 0);
+
+  const beforeFaq = await position(6);
+  await page
+    .locator("#preguntas details")
+    .first()
+    .evaluate((el: HTMLDetailsElement) => {
+      el.open = true;
+    });
+  await expect
+    .poll(async () => (await position(6)).top)
+    .toBeGreaterThan(beforeFaq.top + 100);
+  const faqOpen = await position(6);
+  await page
+    .locator("#preguntas details")
+    .first()
+    .evaluate((el: HTMLDetailsElement) => {
+      el.open = false;
+    });
+  await expect
+    .poll(async () => (await position(6)).top)
+    .toBeCloseTo(beforeFaq.top, 0);
+
+  // Twelve materials are SSR output of the real component, not a product QA route.
+  const markup = readFileSync("tests/.generated/materials-12.html", "utf8");
+  await page.locator("#materiales").evaluate((el, markup) => {
+    el.innerHTML = new DOMParser()
+      .parseFromString(markup, "text/html")
+      .querySelector("#materiales")!.innerHTML;
+  }, markup);
+  const beforeMaterials = await position(3);
+  const sectionHeight = () =>
+    page
+      .locator("#materiales")
+      .evaluate((el) => el.getBoundingClientRect().height);
+  const closedHeight = await sectionHeight();
+  await page
+    .locator(".materials-disclosure")
+    .evaluate((el: HTMLDetailsElement) => {
+      el.open = true;
+    });
+  await expect
+    .poll(async () => (await position(3)).top)
+    .toBeGreaterThan(beforeMaterials.top + 1000);
+  const materialsOpen = await position(3);
+  expect(materialsOpen.top - beforeMaterials.top).toBeCloseTo(
+    (await sectionHeight()) - closedHeight,
+    0,
+  );
+  await page
+    .locator(".materials-disclosure")
+    .evaluate((el: HTMLDetailsElement) => {
+      el.open = false;
+    });
+  await expect
+    .poll(async () => (await position(3)).top)
+    .toBeCloseTo(beforeMaterials.top, 0);
+
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/about-botanical.svg?geometry-probe", async (route) => {
+    await held;
+    await route.continue();
+  });
+  const beforeImage = await position(4);
+  await page.locator(".essence-copy").evaluate((el) => {
+    const image = document.createElement("img");
+    image.alt = "Geometry probe";
+    image.style.cssText =
+      "width:220px;max-width:100%;height:auto;display:block";
+    image.src = "/ar-crafts/conceptual/about-botanical.svg?geometry-probe";
+    el.append(image);
+  });
+  await page.waitForTimeout(100);
+  const unloadedImage = await position(4);
+  release();
+  await expect
+    .poll(async () => (await position(4)).top)
+    .toBeGreaterThan(unloadedImage.top + 100);
+  const loadedImage = await position(4);
+  const imageHeight = await page
+    .getByAltText("Geometry probe")
+    .evaluate((el) => el.getBoundingClientRect().height);
+  expect(loadedImage.top - unloadedImage.top).toBeCloseTo(imageHeight, 0);
+  // Changing upstream heights without scrolling must redraw a newly reached stem.
+  await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+  const beforeShift = await position(1);
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll<HTMLElement>(
+      ".hero-scene, .journeys",
+    )) {
+      el.style.height = "0";
+      el.style.overflow = "hidden";
+      el.style.padding = "0";
+    }
+  });
+  await expect
+    .poll(async () => (await position(1)).offset)
+    .toBeLessThan(beforeShift.offset - 100);
+  console.log(
+    "geometry-rendered " +
+      JSON.stringify({
+        beforeMenu,
+        menuOpen,
+        beforeFaq,
+        faqOpen,
+        beforeMaterials,
+        materialsOpen,
+        beforeImage,
+        unloadedImage,
+        loadedImage,
+        imageHeight,
+      }),
+  );
+});
+
+test("finite jewel glints change original facet/setting paint and return to rest", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".ar-site")).toHaveAttribute(
+    "data-motion-ready",
+    "",
+  );
+  const readings = await page
+    .locator(".butterfly-svg")
+    .evaluate(async (svg) => {
+      const paths = [...svg.querySelectorAll<SVGPathElement>("[data-glint]")];
+      return await Promise.all(
+        paths.map(async (path) => {
+          const animation = path.getAnimations()[0];
+          await animation.ready;
+          animation.pause();
+          const timing = animation.effect!.getTiming();
+          const duration = Number(timing.duration);
+          const delay = Number(timing.delay ?? 0);
+          const paint = () => ({
+            opacity: Number(getComputedStyle(path).opacity),
+            scale: new DOMMatrix(getComputedStyle(path).transform).a,
+          });
+          animation.currentTime = 0;
+          const before = paint();
+          animation.currentTime = delay + duration * 0.4;
+          const during = paint();
+          animation.currentTime = delay + duration + 1;
+          const after = paint();
+          return {
+            kind: path.getAttribute("data-glint"),
+            iterations: timing.iterations,
+            before,
+            during,
+            after,
+          };
+        }),
+      );
+    });
+  expect(readings).toHaveLength(6);
+  for (const reading of readings) {
+    expect(reading.iterations).toBe(1);
+    if (reading.kind === "facet")
+      expect(reading.during.opacity).toBeGreaterThan(reading.before.opacity);
+    else expect(reading.during.scale).toBeGreaterThan(reading.before.scale);
+    expect(reading.after).toEqual(reading.before);
+  }
+});
+
+for (const [width, height, reducedMotion, reason] of [
+  [768, 900, "no-preference", "viewport-width"],
+  [390, 900, "no-preference", "viewport-width"],
+  [320, 900, "no-preference", "viewport-width"],
+  [1440, 500, "no-preference", "viewport-height"],
+  [1440, 900, "reduce", "reduced-motion"],
+] as const) {
+  test(`normal flow and rendered fallback at ${width}×${height}, ${reducedMotion}`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion });
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    // Exercise the system policy separately from the always-animated demo.
+    await page.locator(".ar-site").evaluate((site) => {
+      (site as HTMLElement).dataset.motionPolicy = "system";
+      window.dispatchEvent(new Event("resize"));
+    });
+    await expect(page.locator(".inspiration-scene")).toHaveAttribute(
+      "data-scene-reason",
+      reason,
+    );
+    expect((await scenePaint(page)).position).toBe("static");
+    expect((await scenePaint(page)).visible).toHaveLength(3);
+    if (reducedMotion === "reduce") {
+      const fallback = await page.locator(".butterfly-svg").evaluate((svg) => ({
+        animations: svg.getAnimations({ subtree: true }).length,
+        opacity: getComputedStyle(svg.querySelector('[data-glint="facet"]')!)
+          .opacity,
+        offset: getComputedStyle(
+          document.querySelector(".branch-1440 [data-stem]")!,
+        ).strokeDashoffset,
+        leaves: [...document.querySelectorAll(".branch-1440 [data-leaf]")].map(
+          (el) => getComputedStyle(el).opacity,
+        ),
+      }));
+      expect(fallback.animations).toBe(0);
+      expect(fallback.opacity).toBe("0.25");
+      expect(parseFloat(fallback.offset)).toBe(0);
+      expect(fallback.leaves.every((opacity) => opacity === "1")).toBe(true);
+    }
+  });
+}
+
+test("the demo animates under reduced motion, including the narrow desktop preview", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 852, height: 1004 });
+  await page.goto("/");
+  await expect(page.locator(".ar-site")).toHaveAttribute(
+    "data-motion-policy",
+    "always",
+  );
+  await expect(page.locator(".ar-site")).toHaveAttribute(
+    "data-motion-ready",
+    "",
+  );
+  await expect(page.locator(".inspiration-scene")).toHaveAttribute(
+    "data-scene-reason",
+    "active",
+  );
+  const paint = await page.evaluate(() => {
+    const branch = document.querySelector('.branch-768[data-branch="1"]')!;
+    return {
+      reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
+      arrival: getComputedStyle(document.querySelector(".butterfly-art")!)
+        .animationName,
+      glints: [...document.querySelectorAll("[data-glint]")].map(
+        (el) => getComputedStyle(el).animationName,
+      ),
+      offset: parseFloat(
+        getComputedStyle(branch.querySelector("[data-stem]")!).strokeDashoffset,
+      ),
+      leaves: [...branch.querySelectorAll("[data-leaf]")].map(
+        (el) => getComputedStyle(el).opacity,
+      ),
+    };
+  });
+  expect(paint.reduced).toBe(true);
+  expect(paint.arrival).toBe("butterfly-arrival");
+  expect(paint.glints).toHaveLength(6);
+  expect(paint.glints.every((name) => name.startsWith("jewel-"))).toBe(true);
+  expect(paint.offset).toBeGreaterThan(100);
+  expect(paint.leaves.every((opacity) => opacity === "0")).toBe(true);
+  const geometry = await sceneGeometry(page);
+  for (const [ratio, caption] of [
+    [0.08, "Formas orgánicas · pieza conceptual"],
+    [0.48, "Detalles que brillan · ilustración"],
+    [0.9, "Manos que crean · esquema de encuadre"],
+    [0.08, "Formas orgánicas · pieza conceptual"],
+  ] as const) {
+    await page.evaluate(
+      ({ top, travel, ratio }) =>
+        scrollTo({ top: top + travel * ratio, behavior: "instant" }),
+      { ...geometry, ratio },
+    );
+    await expect
+      .poll(async () => (await scenePaint(page)).visible)
+      .toEqual([caption]);
+    expect((await scenePaint(page)).bottom).toBeLessThan(1004);
+  }
+});
+
+test("reading room updates when sticky content grows without viewport or scene height changing", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  await expect
+    .poll(async () => (await scenePaint(page)).position)
+    .toBe("sticky");
+  await page.waitForTimeout(600);
+  await page.locator(".inspiration-scene h2").evaluate((el) => {
+    el.textContent =
+      "Ideas que florecen y detalles de una creación editorial. ".repeat(7);
+  });
+  await expect(page.locator(".inspiration-scene")).toHaveAttribute(
+    "data-scene-reason",
+    "insufficient-reading-space",
+  );
+  expect((await scenePaint(page)).position).toBe("static");
+  expect((await scenePaint(page)).visible).toHaveLength(3);
+  await page.locator(".inspiration-scene h2").evaluate((el) => {
+    el.textContent = "Ideas que florecen.";
+  });
+  await expect
+    .poll(async () => (await scenePaint(page)).position)
+    .toBe("sticky");
+});
+
+test("without application JavaScript all original motifs and images render in flow", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: { width: 1440, height: 900 },
+  });
+  const page = await context.newPage();
+  await page.goto("/");
+  expect((await scenePaint(page)).position).toBe("static");
+  expect((await scenePaint(page)).visible).toHaveLength(3);
+  const rendered = await page.evaluate(() => ({
+    offsets: [...document.querySelectorAll(".branch-1440 [data-stem]")].map(
+      (el) => parseFloat(getComputedStyle(el).strokeDashoffset),
+    ),
+    leaves: [...document.querySelectorAll(".branch-1440 [data-leaf]")].map(
+      (el) => getComputedStyle(el).opacity,
+    ),
+    animations: document
+      .querySelector(".butterfly-svg")!
+      .getAnimations({ subtree: true }).length,
+  }));
+  expect(rendered.offsets.every((value) => value === 0)).toBe(true);
+  expect(rendered.leaves.every((value) => value === "1")).toBe(true);
+  expect(rendered.animations).toBe(0);
+  await context.close();
+});

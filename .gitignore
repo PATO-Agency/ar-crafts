@@ -1,0 +1,32 @@
+node_modules/
+.next/
+dist/
+coverage/
+.turbo/
+.sanity/
+.vercel/
+# Internal planning and client records stay local.
+docs/
+2026-09-16-pato-food-landing-design.md
+2026-09-16-pato-food-landing-service-launch.md
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+*.log
+playwright-report/
+test-results/
+tests/.generated/
+.DS_Store
+Thumbs.db
+# Original handoff and local design references; runtime assets are in apps/web/public/ar-crafts.
+assets/
+design/
+previews/
+content/
+AR-Crafts-Prompt-Codex.md
+CONTEXT.md
+manifest.json
+apps/web/public/demo/
+.codex/
+.agents/

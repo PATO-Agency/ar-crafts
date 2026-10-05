@@ -1,0 +1,26 @@
+# Local evidence, full dependency copies, private environments and generated files.
+docs/
+.codex/
+.agents/
+.git/
+node_modules/
+**/node_modules/
+**/.next/
+**/dist/
+**/.sanity/
+**/.env
+**/.env.*
+.env
+.env.*
+assets/
+design/
+previews/
+apps/web/public/demo/
+tooling/
+tests/
+playwright-report/
+test-results/
+coverage/
+**/*.tsbuildinfo
+**/*.log
+# Runtime SVG/images live in apps/web/public and remain included.
