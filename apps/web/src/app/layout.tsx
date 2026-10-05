@@ -5,7 +5,7 @@ import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
 import "../features/ar-crafts/theme.css";
 export const metadata: Metadata = {
-  title: "AR crafts · Adriana Ravello · Demo local",
+  title: "AR crafts · Adriana Ravello · Demo visual",
   description:
     "Exploración visual de talleres y materiales de joyería artesanal. Contenido e ilustraciones de demostración.",
   robots: { index: false, follow: false },

@@ -34,7 +34,7 @@ Los comandos `assets:botanical` y `assets:butterfly` requieren los SVG originale
 
 ## Vercel
 
-Proyecto dedicado `ar-crafts-demo`, preparado para conectar a `PATO-Agency/ar-crafts`. Configuración de proyecto:
+Demo: https://ar-crafts-demo.vercel.app. Proyecto dedicado `ar-crafts-demo`, conectado a `PATO-Agency/ar-crafts`; los pushes a `main` generan despliegues. Configuración de proyecto:
 
 - Root Directory: `apps/web`, incluyendo fuentes fuera de esa carpeta.
 - Node.js: `22.x`.
