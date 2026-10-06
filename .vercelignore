@@ -1,5 +1,9 @@
 # Local evidence, full dependency copies, private environments and generated files.
 docs/
+plans/
+.impeccable/
+**/.impeccable/
+skills-lock.json
 .codex/
 .agents/
 .git/

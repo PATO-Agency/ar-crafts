@@ -536,12 +536,12 @@ section {
   height: 40vh;
   aspect-ratio: auto;
   border-radius: 0;
-  clip-path: inset(calc((1 - var(--scene-reveal, 0)) * 100%) 0 0);
+  clip-path: inset(100% 0 0);
 }
 .inspiration-scene:is([data-scene-ready], [data-scene-measure])
   .inspiration-slide:first-child
   .craft-art {
-  --scene-reveal: 1;
+  clip-path: inset(0 0 0);
 }
 .inspiration-scene:is([data-scene-ready], [data-scene-measure])
   .inspiration-slide
@@ -549,7 +549,6 @@ section {
   img {
   width: 100%;
   max-width: 100%;
-  transform: scale(var(--scene-scale, 1));
 }
 .inspiration-scene:is([data-scene-ready], [data-scene-measure])
   .inspiration-slide
@@ -586,7 +585,7 @@ section {
   height: 100%;
   background: var(--color-gold);
   transform-origin: left;
-  transform: scaleX(var(--scene-progress, 0));
+  transform: scaleX(0);
 }
 .scene-stories {
   display: none;
@@ -778,14 +777,7 @@ section {
   top: 0;
 }
 .hero-scene[data-hero-ready] .butterfly-svg {
-  transform: translateY(calc(var(--hero-progress, 0) * -32px))
-    rotate(calc(var(--hero-progress, 0) * -7deg))
-    scale(calc(1 + var(--hero-progress, 0) * 0.28));
   transform-origin: 55% 45%;
-}
-.hero-scene[data-hero-ready] .hero-copy {
-  transform: translateY(calc(var(--hero-progress, 0) * -24px));
-  opacity: calc(1 - var(--hero-progress, 0) * 0.25);
 }
 [data-motion-ready] [data-butterfly-body] {
   transform-box: view-box;
@@ -804,7 +796,6 @@ section {
 .hero-scene[data-hero-ready] [data-butterfly-orbit] {
   transform-box: view-box;
   transform-origin: 370px 360px;
-  transform: rotate(calc(var(--hero-progress, 0) * 12deg));
 }
 .scroll-cue {
   display: flex;
@@ -953,11 +944,11 @@ section {
     grid-template-columns: 1fr;
     padding-top: 8px;
     padding-bottom: 48px;
-    gap: 24px;
+    gap: 12px;
   }
   .hero > .butterfly-art {
     order: -1;
-    width: 300px;
+    width: 160px;
     justify-self: center;
   }
   .hero h1 {
@@ -965,7 +956,7 @@ section {
     line-height: 0.98;
   }
   .hero-copy {
-    gap: 20px;
+    gap: 16px;
   }
   .hero-mobile-eyebrow {
     display: block;
@@ -1076,10 +1067,10 @@ section {
     --gutter: 16px;
   }
   .hero h1 {
-    font-size: 46px;
+    font-size: 42px;
   }
   .hero > .butterfly-art {
-    width: 264px;
+    width: 96px;
   }
   .branch-390 {
     display: none;

@@ -1,6 +1,6 @@
 # AR Crafts
 
-Landing de demostración de AR Crafts, mantenida por PATO Agency. Usa contenido fixture: el CMS, el contacto comercial y la aprobación visual final siguen pendientes.
+Landing de demostración de AR Crafts, mantenida por PATO Agency. Usa contenido fixture: el CMS, el contacto comercial y el contenido definitivo siguen pendientes.
 
 ## Desarrollo
 
@@ -14,6 +14,10 @@ npm run dev
 Abre http://127.0.0.1:3000. No se necesitan credenciales para la demo local.
 
 ## Revisión visual
+
+El contexto vigente de la landing está en [PRODUCT.md](apps/web/PRODUCT.md) y su identidad, componentes, responsive y movimiento actuales en [DESIGN.md](apps/web/DESIGN.md). El usuario aprobó la sincronización de galería, las optimizaciones de movimiento y el hero móvil B. El 6 de octubre de 2026 comunicó revisión física en iPhone/Safari y Android/Chrome y aceptó la validación disponible para actualizar esta demo. Se conserva el recorrido de escritorio de 225vh.
+
+Verificación disponible: 175 pruebas unitarias; Chrome 72/72 y WebKit 71/72 E2E. Firefox está bloqueado al arrancar en el entorno Windows utilizado. WebKit conserva un fallo de navegación secuencial con Tab; no se probó teclado en Safari físico. Estas limitaciones quedan aceptadas para esta actualización, sin acreditar compatibilidad completa ni conformidad de accesibilidad. Los informes y capturas detallados permanecen locales en `plans/` y `docs/`.
 
 Recomendado: ventana de 1440 × 900, zoom 100%. Recarga arriba y observa seis segundos para apreciar la entrada de la mariposa y sus destellos. Baja lentamente: el hero permanece visible mientras crece el follaje y gira el aro. Las ramas y hojas siguen la posición del scroll, también al retroceder. En Inspiración, observa la transición pieza → detalle → manos y recorre el tramo en sentido inverso.
 

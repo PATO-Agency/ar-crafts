@@ -1,5 +1,375 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { waitForMotionController } from "./motion-ready";
+
+for (const [width, height] of [
+  [320, 568],
+  [390, 667],
+  [390, 844],
+]) {
+  test(`compact mobile hero exposes both routes without scrolling at ${width}x${height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    await page.evaluate(() => document.fonts.ready);
+    const actions = page.locator(".hero-actions a");
+    await expect(actions).toHaveCount(2);
+    for (const action of await actions.all()) {
+      await expect(action).toBeInViewport({ ratio: 1 });
+      const bounds = await action.boundingBox();
+      expect(bounds?.height).toBeGreaterThanOrEqual(52);
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    for (const section of ["talleres", "materiales"]) {
+      await settledScroll(page, 0);
+      await page.locator(`.hero-actions a[href="#${section}"]`).click();
+      await expect(page).toHaveURL(new RegExp(`#${section}$`));
+      await expect(page.locator(`#${section} h2`)).toBeInViewport();
+    }
+  });
+}
+
+type BranchProbeWindow = typeof window & {
+  branchProbe: {
+    take(): {
+      mutations: number;
+      writes: number;
+      reads: Record<string, number>;
+      lengths: number;
+    };
+    stop(): void;
+  };
+};
+
+async function observeBranchWork(page: Page) {
+  await page.evaluate(() => {
+    const branch = document.querySelector('.branch-1440[data-branch="6"]')!;
+    const styles = new Set(
+      [...branch.querySelectorAll<SVGElement>("*")].map((el) => el.style),
+    );
+    let mutations = 0,
+      writes = 0,
+      lengths = 0;
+    let reads: Record<string, number> = {};
+    const originalRect = Element.prototype.getBoundingClientRect;
+    const originalSet = CSSStyleDeclaration.prototype.setProperty;
+    const originalLength = SVGGeometryElement.prototype.getTotalLength;
+    Element.prototype.getBoundingClientRect = function () {
+      if (this.matches("svg[data-branch]")) {
+        const layout = this.getAttribute("data-layout")!;
+        reads[layout] = (reads[layout] ?? 0) + 1;
+      }
+      return originalRect.call(this);
+    };
+    CSSStyleDeclaration.prototype.setProperty = function (...args) {
+      if (styles.has(this)) writes++;
+      return originalSet.apply(this, args);
+    };
+    SVGGeometryElement.prototype.getTotalLength = function () {
+      lengths++;
+      return originalLength.call(this);
+    };
+    const observer = new MutationObserver((records) => {
+      mutations += records.length;
+    });
+    observer.observe(branch, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style", "data-grown"],
+    });
+    (window as BranchProbeWindow).branchProbe = {
+      take() {
+        mutations += observer.takeRecords().length;
+        const result = { mutations, writes, reads, lengths };
+        mutations = writes = lengths = 0;
+        reads = {};
+        return result;
+      },
+      stop() {
+        observer.disconnect();
+        Element.prototype.getBoundingClientRect = originalRect;
+        CSSStyleDeclaration.prototype.setProperty = originalSet;
+        SVGGeometryElement.prototype.getTotalLength = originalLength;
+      },
+    };
+  });
+}
+
+async function settledScroll(page: Page, top: number) {
+  await page.evaluate(async (top) => {
+    scrollTo({ top, behavior: "instant" });
+    // Also exercise a scheduled update when a clamped position stays identical.
+    dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  }, top);
+}
+
+test("a distant active branch stops identical writes at both clamps and restores on reverse", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  await page.locator('footer a[href="#galeria"]').click();
+  await page
+    .locator(".inspiration-slide img")
+    .evaluateAll((imgs) =>
+      Promise.all(
+        imgs.map((img) =>
+          (img as HTMLImageElement).decode().catch(() => undefined),
+        ),
+      ),
+    );
+  await settledScroll(page, 0);
+  const branch = page.locator('.branch-1440[data-branch="6"]');
+  await expect(branch).toHaveAttribute("data-grown", "0");
+  const geometry = await branch.evaluate((el) => ({
+    top: el.getBoundingClientRect().top + scrollY,
+    height: el.getBoundingClientRect().height,
+  }));
+  await observeBranchWork(page);
+  const take = () =>
+    page.evaluate(() => (window as BranchProbeWindow).branchProbe.take());
+  const evidence = [];
+  try {
+    for (const top of [20, 40, 60]) {
+      await settledScroll(page, top);
+      expect(await page.evaluate(() => scrollY)).toBe(top);
+      await expect(branch).toHaveAttribute("data-grown", "0");
+    }
+    const zero = await take();
+    expect(zero.mutations).toBe(0);
+    expect(zero.writes).toBe(0);
+    evidence.push({ phase: "zero", ...zero });
+    const middle =
+      geometry.top - 900 * 0.95 + 0.45 * (geometry.height + 900 * 0.83);
+    await settledScroll(page, middle);
+    const actualMiddle = await page.evaluate(() => scrollY);
+    await expect
+      .poll(() => branch.getAttribute("data-grown").then(Number))
+      .toBeCloseTo(0.45, 2);
+    const snapshot = await branch.evaluate((el) => ({
+      grown: el.getAttribute("data-grown"),
+      styles: [
+        ...el.querySelectorAll<SVGElement>("[data-stem], [data-leaf]"),
+      ].map((part) => part.getAttribute("style")),
+    }));
+    const entering = await take();
+    expect(entering.mutations).toBeGreaterThan(0);
+    expect(entering.writes).toBeGreaterThan(0);
+    evidence.push({ phase: "middle", ...entering });
+    await page.screenshot({
+      path: testInfo.outputPath("003-branch-middle.png"),
+    });
+    const end = await page.evaluate(
+      () => document.documentElement.scrollHeight - innerHeight,
+    );
+    await settledScroll(page, end);
+    await expect(branch).toHaveAttribute("data-grown", "1");
+    await take();
+    for (const top of [end - 20, end - 40, end - 20]) {
+      await settledScroll(page, top);
+      expect(await page.evaluate(() => scrollY)).toBe(top);
+      await expect(branch).toHaveAttribute("data-grown", "1");
+    }
+    const full = await take();
+    expect(full.mutations).toBe(0);
+    expect(full.writes).toBe(0);
+    evidence.push({ phase: "one", ...full });
+    await settledScroll(page, actualMiddle);
+    await expect
+      .poll(() =>
+        branch.evaluate((el) => ({
+          grown: el.getAttribute("data-grown"),
+          styles: [
+            ...el.querySelectorAll<SVGElement>("[data-stem], [data-leaf]"),
+          ].map((part) => part.getAttribute("style")),
+        })),
+      )
+      .toEqual(snapshot);
+    await page.screenshot({
+      path: testInfo.outputPath("003-branch-reverse.png"),
+    });
+    await settledScroll(page, 0);
+    await expect(branch).toHaveAttribute("data-grown", "0");
+    expect(
+      await branch
+        .locator("[data-leaf]")
+        .evaluateAll((leaves) =>
+          leaves.every((leaf) => getComputedStyle(leaf).opacity === "0"),
+        ),
+    ).toBe(true);
+    await testInfo.attach("branch-clamps", {
+      body: JSON.stringify(evidence, null, 2),
+      contentType: "application/json",
+    });
+  } finally {
+    await page.evaluate(() => (window as BranchProbeWindow).branchProbe.stop());
+  }
+});
+
+test("breakpoint crossings measure only the current family and reset reapplies cached dasharrays", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator(".ar-site")).toHaveAttribute(
+    "data-motion-ready",
+    "",
+  );
+  await observeBranchWork(page);
+  const evidence = [];
+  try {
+    for (const width of [
+      359, 360, 767, 768, 1023, 1024, 1023, 768, 767, 360, 359,
+    ]) {
+      await page.setViewportSize({ width, height: 900 });
+      const layout =
+        width < 360
+          ? "320"
+          : width < 768
+            ? "390"
+            : width < 1024
+              ? "768"
+              : "1440";
+      const branch = page.locator(`.branch-${layout}[data-branch="1"]`);
+      await expect(branch.locator("[data-stem]")).not.toHaveCSS(
+        "stroke-dasharray",
+        "none",
+      );
+      const geometry = await branch.evaluate((el) => ({
+        top: el.getBoundingClientRect().top + scrollY,
+        height: el.getBoundingClientRect().height,
+      }));
+      await settledScroll(
+        page,
+        geometry.top - 900 * 0.95 + 0.6 * (geometry.height + 900 * 0.83),
+      );
+      await expect
+        .poll(() => branch.getAttribute("data-grown").then(Number))
+        .toBeCloseTo(0.6, 2);
+      const paint = await branch.evaluate((el) => {
+        const rect = el.getBoundingClientRect(),
+          stem = el.querySelector<SVGPathElement>("[data-stem]")!;
+        const length = stem.getTotalLength(),
+          progress = Math.max(
+            0,
+            Math.min(
+              1,
+              (innerHeight * 0.95 - rect.top) /
+                (rect.height + innerHeight * 0.83),
+            ),
+          );
+        return {
+          progress,
+          length,
+          array: Number(stem.style.strokeDasharray),
+          offset: Number(stem.style.strokeDashoffset),
+          leaves: [...el.querySelectorAll<SVGElement>("[data-leaf]")].map(
+            (leaf) => {
+              let closest = Infinity,
+                attachment = 0;
+              for (let i = 0; i <= 640; i++) {
+                const point = stem.getPointAtLength((length * i) / 640);
+                const distance = Math.hypot(
+                  point.x - Number(leaf.dataset.attachX),
+                  point.y - Number(leaf.dataset.attachY),
+                );
+                if (distance < closest) {
+                  closest = distance;
+                  attachment = i / 640;
+                }
+              }
+              return {
+                attachment,
+                opacity: Number(getComputedStyle(leaf).opacity),
+              };
+            },
+          ),
+        };
+      });
+      expect(paint.array).toBeCloseTo(paint.length, 2);
+      expect(paint.offset).toBeCloseTo(paint.length * (1 - paint.progress), 2);
+      for (const leaf of paint.leaves) {
+        if (leaf.attachment < paint.progress - 0.08)
+          expect(leaf.opacity).toBe(1);
+        if (leaf.attachment > paint.progress + 0.015)
+          expect(leaf.opacity).toBe(0);
+      }
+      const visible = await page
+        .locator('svg[data-branch="1"]')
+        .evaluateAll((els) =>
+          els
+            .filter((el) => getComputedStyle(el).display !== "none")
+            .map((el) => el.getAttribute("data-layout")),
+        );
+      expect(visible).toEqual([layout]);
+      await page.evaluate(() =>
+        (window as BranchProbeWindow).branchProbe.take(),
+      );
+      const top = await page.evaluate(() => scrollY);
+      await settledScroll(page, top + 1);
+      await settledScroll(page, top);
+      const calls = await page.evaluate(() =>
+        (window as BranchProbeWindow).branchProbe.take(),
+      );
+      expect(Object.keys(calls.reads)).toEqual([layout]);
+      expect(calls.reads[layout]).toBeGreaterThanOrEqual(14);
+      expect(calls.lengths).toBe(0);
+      evidence.push({ width, layout, ...calls });
+    }
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.locator(".ar-site").evaluate((el) => {
+      (el as HTMLElement).dataset.motionPolicy = "system";
+      dispatchEvent(new Event("resize"));
+    });
+    await expect(page.locator(".ar-site")).not.toHaveAttribute(
+      "data-motion-ready",
+      "",
+    );
+    await expect(
+      page.locator('.branch-320[data-branch="1"] [data-stem]'),
+    ).not.toHaveAttribute("style", /stroke-dasharray/);
+    await page.evaluate(() => (window as BranchProbeWindow).branchProbe.take());
+    const top = await page.evaluate(() => scrollY);
+    await settledScroll(page, top + 1);
+    await settledScroll(page, top);
+    const fallback = await page.evaluate(() =>
+      (window as BranchProbeWindow).branchProbe.take(),
+    );
+    expect(fallback.mutations).toBe(0);
+    expect(fallback.writes).toBe(0);
+    await page.locator(".ar-site").evaluate((el) => {
+      (el as HTMLElement).dataset.motionPolicy = "always";
+      dispatchEvent(new Event("resize"));
+    });
+    await expect(page.locator(".ar-site")).toHaveAttribute(
+      "data-motion-ready",
+      "",
+    );
+    await expect(
+      page.locator('.branch-320[data-branch="1"] [data-stem]'),
+    ).not.toHaveCSS("stroke-dasharray", "none");
+    const reactivated = await page.evaluate(() =>
+      (window as BranchProbeWindow).branchProbe.take(),
+    );
+    expect(reactivated.lengths).toBe(0);
+    await testInfo.attach("active-family-reads", {
+      body: JSON.stringify({ evidence, fallback, reactivated }, null, 2),
+      contentType: "application/json",
+    });
+  } finally {
+    await page.evaluate(() => (window as BranchProbeWindow).branchProbe.stop());
+  }
+});
 
 async function sceneGeometry(page: Page) {
   return page.locator(".inspiration-scene").evaluate((scene) => {
@@ -30,7 +400,20 @@ async function scenePaint(page: Page) {
           if (!scene.hasAttribute("data-scene-ready")) return true;
           const image = el.querySelector(".craft-art")!;
           const imageStyle = getComputedStyle(image);
-          const reveal = Number(imageStyle.getPropertyValue("--scene-reveal"));
+          const clip = imageStyle.clipPath;
+          const inset = clip.match(
+            /^inset\(([-\d.]+)(%|px)(?:\s+[-\d.]+(?:%|px)?){0,3}\)$/,
+          );
+          if (clip !== "none" && !inset)
+            throw new Error(`Unexpected clip: ${clip}`);
+          const reveal =
+            clip === "none"
+              ? 1
+              : 1 -
+                Number(inset![1]) /
+                  (inset![2] === "%"
+                    ? 100
+                    : image.getBoundingClientRect().height);
           return (
             el.dataset.active === "true" &&
             reveal >= 0.99 &&
@@ -43,6 +426,140 @@ async function scenePaint(page: Page) {
     };
   });
 }
+
+test("a failed gallery image keeps its masked placeholder and survives flow transitions", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route("**/ar-crafts/conceptual/gallery-gem-flower.svg", (route) =>
+    route.abort(),
+  );
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const scene = page.locator(".inspiration-scene");
+  const detail = scene.locator(".inspiration-slide").nth(1);
+  const seek = async () => {
+    await expect(scene).toHaveAttribute("data-scene-reason", "active");
+    const geometry = await sceneGeometry(page);
+    await page.evaluate(
+      ({ top, travel }) =>
+        scrollTo({ top: top + travel * 0.28, behavior: "instant" }),
+      geometry,
+    );
+    await expect(detail).toHaveAttribute("data-active", "true");
+    await expect(detail.locator(".art-placeholder")).toBeVisible();
+    await expect
+      .poll(() =>
+        detail
+          .locator(".craft-art")
+          .evaluate((el) =>
+            Number(
+              getComputedStyle(el).clipPath.match(/^inset\(([-\d.]+)%/)?.[1],
+            ),
+          ),
+      )
+      .toBeCloseTo(300 / 7, 0);
+  };
+  await seek();
+  await expect(page.locator(".ar-site")).toHaveAttribute(
+    "data-motion-ready",
+    "",
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("failed-image-masked.png"),
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(scene).toHaveAttribute("data-scene-reason", "viewport-width");
+  await expect(detail.locator(".craft-art")).toHaveCSS("clip-path", "none");
+  await expect(scene.locator(".inspiration-slide[aria-hidden]")).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seek();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.locator(".ar-site").evaluate((el) => {
+    (el as HTMLElement).dataset.motionPolicy = "system";
+    window.dispatchEvent(new Event("resize"));
+  });
+  await expect(scene).toHaveAttribute("data-scene-reason", "reduced-motion");
+  await expect(detail.locator(".craft-art")).toHaveCSS("clip-path", "none");
+  await page.locator(".ar-site").evaluate((el) => {
+    (el as HTMLElement).dataset.motionPolicy = "always";
+    window.dispatchEvent(new Event("resize"));
+  });
+  await seek();
+});
+
+test("a replaced image receives the same zoom and reset preserves unrelated inline styles", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const scene = page.locator(".inspiration-scene");
+  await expect(scene).toHaveAttribute("data-scene-ready", "");
+  const geometry = await sceneGeometry(page);
+  await page.evaluate(
+    ({ top, travel }) =>
+      scrollTo({ top: top + travel * 0.68, behavior: "instant" }),
+    geometry,
+  );
+  const image = scene.locator(".inspiration-slide img").nth(2);
+  await expect
+    .poll(() =>
+      image.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a),
+    )
+    .toBeGreaterThan(1);
+  const before = await image.evaluate((el) => getComputedStyle(el).transform);
+  const detachedTransform = await image.evaluate(async (el) => {
+    const clone = el.cloneNode(true) as HTMLImageElement;
+    clone.style.removeProperty("transform");
+    clone.style.color = "rgb(1, 2, 3)";
+    el.replaceWith(clone);
+    clone.dispatchEvent(new Event("load"));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    return (el as HTMLElement).style.transform;
+  });
+  expect(detachedTransform).toBe("");
+  await expect(image).toHaveCSS("transform", before);
+  await page
+    .locator(
+      ".butterfly-svg, .hero-copy, [data-butterfly-orbit], .scene-progress > span, .inspiration-slide .craft-art",
+    )
+    .evaluateAll((els) =>
+      els.forEach((el) =>
+        (el as HTMLElement | SVGElement).style.setProperty(
+          "color",
+          "rgb(1, 2, 3)",
+        ),
+      ),
+    );
+  const executors = page.locator(
+    ".butterfly-svg, .hero-copy, [data-butterfly-orbit], .scene-progress > span, .inspiration-slide .craft-art, .inspiration-slide img",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(scene).not.toHaveAttribute("data-scene-ready", "");
+  const cleaned = await executors.evaluateAll((els) =>
+    els.map((el) => ({
+      transform: (el as HTMLElement).style.transform,
+      clip: (el as HTMLElement).style.clipPath,
+      opacity: (el as HTMLElement).style.opacity,
+      color: (el as HTMLElement).style.color,
+    })),
+  );
+  expect(
+    cleaned.every(
+      (el) => el.transform === "" && el.clip === "" && el.opacity === "",
+    ),
+  ).toBe(true);
+  expect(cleaned.filter((el) => el.color === "rgb(1, 2, 3)")).toHaveLength(8);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(scene).toHaveAttribute("data-scene-ready", "");
+  await expect(image).not.toHaveAttribute("style", /transform:\s*$/);
+  await expect
+    .poll(() => image.evaluate((el) => el.style.transform.startsWith("scale(")))
+    .toBe(true);
+});
 
 test("a fresh 1440×660 scene fits and renders the same sticky as after resizing", async ({
   page,
@@ -79,6 +596,7 @@ test("the rendered scene holds title and steps and reverses its visible image", 
 }) => {
   await page.setViewportSize({ width: 1024, height: 900 });
   await page.goto("/");
+  await waitForMotionController(page);
   await expect
     .poll(async () => (await scenePaint(page)).position)
     .toBe("sticky");
@@ -530,7 +1048,7 @@ test("reading room updates when sticky content grows without viewport or scene h
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.evaluate(() => document.fonts.ready);
+  await waitForMotionController(page);
   await expect
     .poll(async () => (await scenePaint(page)).position)
     .toBe("sticky");

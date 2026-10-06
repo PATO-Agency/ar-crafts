@@ -35,7 +35,7 @@ for (const count of [0, 6, 12]) {
         page.getByRole("link", { name: /Ver contacto/ }).first(),
       ).toBeVisible();
     await page.screenshot({
-      path: `docs/delivery/captures/materials-${count}-320.png`,
+      path: test.info().outputPath(`materials-${count}-320.png`),
       fullPage: true,
     });
   });

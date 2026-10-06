@@ -8,7 +8,7 @@ import { createWhatsAppClickPayload } from "@pato-food/analytics";
 import { MaterialsSection } from "./materials-section";
 import { contactUrl } from "./contact-link";
 import { toCraftPageContent } from "./to-page-content";
-import { branchProgress, sceneState } from "./motion-math";
+import { branchProgress, sceneTimeline } from "./motion-math";
 vi.mock("next/image", () => ({
   default: (props: Record<string, unknown>) => (
     <img alt={String(props.alt)} src={String(props.src)} />
@@ -140,7 +140,89 @@ describe("craft behavior", () => {
     expect(branchProgress(500, 200, 900)).toBeLessThan(grown);
     expect(branchProgress(1000, 200, 900)).toBe(0);
     expect(branchProgress(-1500, 200, 900)).toBe(1);
-    expect(sceneState(-900, 1000, 3)).toBe(2);
-    expect(sceneState(-100, 1000, 3)).toBe(0);
+    expect(sceneTimeline(-900, 1000).index).toBe(2);
+    expect(sceneTimeline(-100, 1000).index).toBe(0);
   });
+});
+
+describe("gallery timeline", () => {
+  it.each([
+    [0, 0],
+    [0.08, 0],
+    [0.2595, 0],
+    [0.26, 1],
+    [0.2605, 1],
+    [0.28, 1],
+    [0.48, 1],
+    [0.68, 1],
+    [0.7195, 1],
+    [0.72, 2],
+    [0.7205, 2],
+    [0.9, 2],
+    [1, 2],
+  ])(
+    "selects the visually dominant stage at %s (including incoming ties)",
+    (progress, index) => {
+      const timeline = sceneTimeline(-progress * 1000, 1000);
+      expect(timeline.progress).toBeCloseTo(progress, 10);
+      expect(timeline.index).toBe(index);
+    },
+  );
+
+  it("clamps outside the journey and normalizes zero travel", () => {
+    expect(sceneTimeline(100, 1000)).toEqual({
+      progress: 0,
+      reveals: [1, 0, 0],
+      scales: [1, 1.16, 1.16],
+      index: 0,
+    });
+    const end = sceneTimeline(-2000, 1000);
+    expect(end.progress).toBe(1);
+    expect(end.reveals).toEqual([1, 1, 1]);
+    expect(end.index).toBe(2);
+    end.scales.forEach((scale) => expect(scale).toBeCloseTo(16 / 15, 10));
+    expect(sceneTimeline(0, 0).progress).toBe(0);
+    expect(sceneTimeline(-0.28, 0).progress).toBe(0.28);
+    expect(sceneTimeline(-0.28, 0).index).toBe(1);
+    expect(sceneTimeline(-2, 0).progress).toBe(1);
+  });
+
+  it.each([
+    [0.28, [1, 4 / 7, 0], [1.056, 187 / 175, 1.16]],
+    [0.68, [1, 1, 5 / 14], [16 / 15, 16 / 15, 2902 / 2625]],
+  ])(
+    "preserves partial masks and the original zoom at %s",
+    (progress, reveals, scales) => {
+      const timeline = sceneTimeline(-progress * 1000, 1000);
+      timeline.reveals.forEach((reveal, i) =>
+        expect(reveal).toBeCloseTo(reveals[i], 10),
+      );
+      timeline.scales.forEach((scale, i) =>
+        expect(scale).toBeCloseTo(scales[i], 10),
+      );
+    },
+  );
+
+  it("returns identical timelines at the same position after reversals and large jumps", () => {
+    const forward = [0, 0.2595, 0.26, 0.28, 0.68, 0.7195, 0.72, 0.9, 1];
+    const snapshots = new Map(
+      forward.map((p) => [p, sceneTimeline(-p * 1000, 1000)]),
+    );
+    for (const p of [...forward].reverse().concat([1, 0, 0.68, 0.28, 1, 0])) {
+      expect(sceneTimeline(-p * 1000, 1000)).toEqual(snapshots.get(p));
+    }
+  });
+
+  it.each([1 / 3, 2 / 3])(
+    "keeps zoom continuous across the old third at %s",
+    (boundary) => {
+      const before = sceneTimeline(-(boundary - 0.0005) * 1000, 1000);
+      const after = sceneTimeline(-(boundary + 0.0005) * 1000, 1000);
+      expect(after.index).toBe(before.index);
+      after.scales.forEach((scale, i) =>
+        expect(Math.abs(scale - before.scales[i])).toBeLessThan(0.001),
+      );
+      expect(sceneTimeline(-(boundary - 0.0005) * 1000, 1000)).toEqual(before);
+    },
+  );
 });

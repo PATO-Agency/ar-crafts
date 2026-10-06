@@ -1,6 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { mkdirSync } from "node:fs";
-const captures = "docs/delivery/captures";
 test("a failed material image keeps its fallback and contact accessible", async ({
   page,
 }) => {
@@ -18,7 +16,6 @@ test("a failed material image keeps its fallback and contact accessible", async 
       .first(),
   ).toBeVisible();
 });
-test.beforeAll(() => mkdirSync(captures, { recursive: true }));
 for (const width of [320, 390, 768, 1440]) {
   test(`layout and anchor journeys at ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -42,7 +39,9 @@ for (const width of [320, 390, 768, 1440]) {
           .evaluate((el) => getComputedStyle(el).opacity),
       )
       .toBe("1");
-    await page.screenshot({ path: `${captures}/${width}-hero.png` });
+    await page.screenshot({
+      path: test.info().outputPath(`${width}-hero.png`),
+    });
     // Load all images, then capture the current top state; branches now reverse.
     await page.evaluate(() => {
       document.documentElement.style.scrollBehavior = "auto";
@@ -68,7 +67,7 @@ for (const width of [320, 390, 768, 1440]) {
     await page.evaluate(() => scrollTo(0, 0));
     await page.waitForTimeout(300);
     await page.screenshot({
-      path: `${captures}/${width}-full.png`,
+      path: test.info().outputPath(`${width}-full.png`),
       fullPage: true,
     });
     await page
@@ -139,7 +138,9 @@ test("scroll reverses the scene and unwinds grown branches", async ({
         .locator('.inspiration-slide[data-active="true"] .craft-art')
         .evaluate((el) => getComputedStyle(el).clipPath),
     ).toMatch(/^inset\(0(?:%|px)?(?:\s|\))/);
-    await page.screenshot({ path: `${captures}/1440-scene-${index + 1}.png` });
+    await page.screenshot({
+      path: test.info().outputPath(`1440-scene-${index + 1}.png`),
+    });
   }
   const before = await page
     .locator('.branch-1440[data-branch="2"]')
@@ -179,7 +180,7 @@ test("keyboard navigation and effective 200% zoom layout", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.screenshot({ path: `${captures}/zoom-200.png` });
+  await page.screenshot({ path: test.info().outputPath("zoom-200.png") });
   await context.close();
 });
 test("system policy with reduced motion leaves complete motifs and gallery images in flow", async ({
@@ -201,7 +202,7 @@ test("system policy with reduced motion leaves complete motifs and gallery image
   ).toBe(0);
   await expect(page.locator(".inspiration-slide")).toHaveCount(3);
   await page.screenshot({
-    path: `${captures}/reduced-motion.png`,
+    path: test.info().outputPath("reduced-motion.png"),
     fullPage: true,
   });
 });
@@ -223,7 +224,7 @@ test("no JavaScript keeps native menu, FAQ, motifs and gallery usable", async ({
   );
   expect(await page.locator("[data-grown]").count()).toBe(0);
   await page.screenshot({
-    path: `${captures}/no-javascript.png`,
+    path: test.info().outputPath("no-javascript.png"),
     fullPage: true,
   });
   await context.close();

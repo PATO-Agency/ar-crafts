@@ -4,4 +4,7 @@ dist
 coverage
 package-lock.json
 docs
+.impeccable
+**/.impeccable
+plans
 *.tsbuildinfo

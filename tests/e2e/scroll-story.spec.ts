@@ -1,4 +1,233 @@
 import { expect, test, type Page } from "@playwright/test";
+import { writeFileSync } from "node:fs";
+import { waitForMotionController } from "./motion-ready";
+
+type SceneProbeWindow = typeof window & {
+  sceneProbe: {
+    take(): { writes: number; styles: number; semantic: string[] };
+    stop(): void;
+  };
+};
+
+test("gallery caches skip paused writes while same-stage masks and zoom keep painting", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1004 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const scene = page.locator(".inspiration-scene");
+  await expect(scene).toHaveAttribute("data-scene-ready", "");
+  await page.locator('footer a[href="#galeria"]').click();
+  await scene
+    .locator("img")
+    .evaluateAll((imgs) =>
+      Promise.all(
+        imgs.map((img) =>
+          (img as HTMLImageElement).decode().catch(() => undefined),
+        ),
+      ),
+    );
+  const read = () =>
+    scene.evaluate((el) => ({
+      progress: new DOMMatrix(
+        getComputedStyle(el.querySelector(".scene-progress > span")!).transform,
+      ).a,
+      clips: [...el.querySelectorAll(".craft-art")].map(
+        (art) => getComputedStyle(art).clipPath,
+      ),
+      scales: [...el.querySelectorAll("img")].map(
+        (img) => getComputedStyle(img).transform,
+      ),
+      active: [...el.querySelectorAll<HTMLElement>(".inspiration-slide")].map(
+        (slide) => slide.dataset.active,
+      ),
+      visible: [...el.querySelectorAll<HTMLElement>(".inspiration-slide")].map(
+        (slide) => slide.dataset.visible,
+      ),
+      current: el.querySelector('[aria-current="step"]')?.textContent,
+      story: el.querySelector('.scene-story[data-active="true"]')?.textContent,
+    }));
+  const seek = async (progress: number) => {
+    await scene.evaluate(async (el, progress) => {
+      const travel =
+        (el as HTMLElement).offsetHeight -
+        (el.querySelector(".inspiration-sticky") as HTMLElement).offsetHeight;
+      scrollTo({
+        top: el.getBoundingClientRect().top + scrollY + travel * progress,
+        behavior: "instant",
+      });
+      dispatchEvent(new Event("scroll"));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+    }, progress);
+    await expect
+      .poll(async () => (await read()).progress)
+      .toBeCloseTo(progress, 3);
+  };
+  await seek(0.28);
+  await scene.evaluate((el) => {
+    const paintStyles = new Set(
+      [
+        ...el.querySelectorAll<HTMLElement>(
+          ".craft-art, img, .scene-progress > span",
+        ),
+      ].map((part) => part.style),
+    );
+    const original = CSSStyleDeclaration.prototype.setProperty;
+    let writes = 0,
+      styles = 0,
+      semantic: string[] = [];
+    CSSStyleDeclaration.prototype.setProperty = function (...args) {
+      if (paintStyles.has(this)) writes++;
+      return original.apply(this, args);
+    };
+    const collect = (records: MutationRecord[]) => {
+      for (const record of records) {
+        if (record.attributeName === "style") styles++;
+        else semantic.push(record.attributeName!);
+      }
+    };
+    const observer = new MutationObserver(collect);
+    observer.observe(el, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: [
+        "style",
+        "data-active",
+        "data-visible",
+        "aria-hidden",
+        "aria-current",
+      ],
+    });
+    (window as SceneProbeWindow).sceneProbe = {
+      take() {
+        collect(observer.takeRecords());
+        const result = { writes, styles, semantic };
+        writes = styles = 0;
+        semantic = [];
+        return result;
+      },
+      stop() {
+        observer.disconnect();
+        CSSStyleDeclaration.prototype.setProperty = original;
+      },
+    };
+  });
+  const take = () =>
+    page.evaluate(() => (window as SceneProbeWindow).sceneProbe.take());
+  const evidence = [];
+  try {
+    for (const progress of [0.28, 0.68]) {
+      await seek(progress);
+      const before = await read();
+      await take();
+      for (let i = 0; i < 3; i++) await seek(progress);
+      const paused = await take();
+      expect(paused).toEqual({ writes: 0, styles: 0, semantic: [] });
+      await seek(progress + 0.004);
+      const moving = await take(),
+        after = await read();
+      expect(after.active).toEqual(before.active);
+      expect(after.current).toBe(before.current);
+      expect(after.story).toBe(before.story);
+      expect(after.clips).not.toEqual(before.clips);
+      expect(after.scales).not.toEqual(before.scales);
+      expect(moving.writes).toBeGreaterThan(0);
+      expect(moving.styles).toBeGreaterThan(0);
+      expect(moving.semantic).toEqual([]);
+      await seek(progress);
+      expect(await read()).toEqual(before);
+      await page.screenshot({
+        path: testInfo.outputPath(`003-pause-reverse-${progress}.png`),
+      });
+      evidence.push({ progress, paused, moving, before, after });
+    }
+    // Layer visibility changes inside a stage; it has a cache separate from index.
+    for (const [beforeProgress, afterProgress, visible] of [
+      [0.119, 0.121, ["true", "true", "false"]],
+      [0.579, 0.581, ["true", "true", "true"]],
+    ] as const) {
+      await seek(beforeProgress);
+      const before = await read();
+      await take();
+      await seek(afterProgress);
+      const after = await read(),
+        mutations = await take();
+      expect(after.active).toEqual(before.active);
+      expect(after.visible).toEqual(visible);
+      expect(mutations.semantic).toEqual(["data-visible"]);
+    }
+    await seek(0.68);
+    const snapshot = await read();
+    const image = scene.locator("img").nth(2);
+    await image.evaluate(async (el) => {
+      const clone = el.cloneNode(true) as HTMLImageElement;
+      clone.style.removeProperty("transform");
+      el.replaceWith(clone);
+      clone.dispatchEvent(new Event("load"));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+    });
+    await expect(image).toHaveCSS("transform", snapshot.scales[2]);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(scene).not.toHaveAttribute("data-scene-ready", "");
+    await expect(scene.locator(".inspiration-slide[aria-hidden]")).toHaveCount(
+      0,
+    );
+    expect(
+      await scene
+        .locator(".craft-art")
+        .evaluateAll((arts) =>
+          arts.every((art) => getComputedStyle(art).clipPath === "none"),
+        ),
+    ).toBe(true);
+    expect(
+      await image.evaluate((el) => (el as HTMLElement).style.transform),
+    ).toBe("");
+    await page.setViewportSize({ width: 1440, height: 1004 });
+    await expect(scene).toHaveAttribute("data-scene-ready", "");
+    await seek(0.68);
+    expect(await read()).toEqual(snapshot);
+    for (const progress of [0, 1]) {
+      await seek(progress);
+      await page.evaluate(
+        async (direction) => {
+          scrollBy({ top: 10 * direction, behavior: "instant" });
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          );
+        },
+        progress === 0 ? -1 : 1,
+      );
+      await take();
+      const top = await page.evaluate(() => scrollY);
+      await page.evaluate(
+        async ({ top, direction }) => {
+          for (const offset of [10, 20, 10]) {
+            scrollTo({ top: top + offset * direction, behavior: "instant" });
+            await new Promise<void>((resolve) =>
+              requestAnimationFrame(() =>
+                requestAnimationFrame(() => resolve()),
+              ),
+            );
+          }
+        },
+        { top, direction: progress === 0 ? -1 : 1 },
+      );
+      const clamped = await take();
+      expect(clamped).toEqual({ writes: 0, styles: 0, semantic: [] });
+      expect((await read()).progress).toBe(progress);
+    }
+    await testInfo.attach("scene-cache-work", {
+      body: JSON.stringify(evidence, null, 2),
+      contentType: "application/json",
+    });
+  } finally {
+    await page.evaluate(() => (window as SceneProbeWindow).sceneProbe.stop());
+  }
+});
 
 for (const width of [320, 390, 852, 1440]) {
   test(`botanical leaves blossom and retract at the same scroll position at ${width}px`, async ({
@@ -131,6 +360,7 @@ for (const width of [320, 390, 768, 852, 1440]) {
         });
         await page.emulateMedia({ reducedMotion });
         await page.goto("/");
+        await waitForMotionController(page);
         await setPolicy(page, policy);
         const animated = policy === "always" || reducedMotion !== "reduce";
         const sticky = animated && width >= (policy === "always" ? 820 : 1024);
@@ -207,6 +437,7 @@ test("both upward wipes paint intermediate masks and reverse continuously", asyn
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
+  await waitForMotionController(page);
   const scene = page.locator(".inspiration-scene");
   await expect(scene).toHaveAttribute("data-scene-ready", "");
   const geometry = await scene.evaluate((el) => ({
@@ -219,13 +450,27 @@ test("both upward wipes paint intermediate masks and reverse continuously", asyn
     scene
       .locator(".inspiration-slide img")
       .nth(index)
-      .evaluate((image) => ({
-        reveal: Number(
-          getComputedStyle(image).getPropertyValue("--scene-reveal"),
-        ),
-        clip: getComputedStyle(image.closest(".craft-art")!).clipPath,
-        transform: getComputedStyle(image).transform,
-      }));
+      .evaluate((image) => {
+        const art = image.closest(".craft-art")!;
+        const clip = getComputedStyle(art).clipPath;
+        const inset = clip.match(
+          /^inset\(([-\d.]+)(%|px)(?:\s+[-\d.]+(?:%|px)?){0,3}\)$/,
+        );
+        if (clip !== "none" && !inset)
+          throw new Error(`Unexpected clip: ${clip}`);
+        return {
+          reveal:
+            clip === "none"
+              ? 1
+              : 1 -
+                Number(inset![1]) /
+                  (inset![2] === "%"
+                    ? 100
+                    : art.getBoundingClientRect().height),
+          clip,
+          transform: getComputedStyle(image).transform,
+        };
+      });
   for (const [index, ratios] of [
     [1, [0.18, 0.26, 0.34, 0.26]],
     [2, [0.64, 0.72, 0.8, 0.72]],
@@ -260,6 +505,373 @@ test("both upward wipes paint intermediate masks and reverse continuously", asyn
   await expect(page.locator(".scene-story[data-active=true]")).toHaveCount(1);
 });
 
+for (const width of [852, 1440]) {
+  test(`gallery zoom stays continuous across stage changes in both directions at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1004 });
+    await page.goto("/");
+    const scene = page.locator(".inspiration-scene");
+    await expect(scene).toHaveAttribute("data-scene-ready", "");
+    await page.evaluate(() => document.fonts.ready);
+    const geometry = await scene.evaluate((el) => ({
+      top: el.getBoundingClientRect().top + scrollY,
+      travel:
+        (el as HTMLElement).offsetHeight -
+        (el.querySelector(".inspiration-sticky") as HTMLElement).offsetHeight,
+    }));
+    for (const [boundary, changesStage] of [
+      [0.26, true],
+      [0.72, true],
+      [1 / 3, false],
+      [2 / 3, false],
+    ] as const) {
+      const frames = [];
+      for (const progress of [
+        boundary - 0.0005,
+        boundary + 0.0005,
+        boundary - 0.0005,
+      ]) {
+        await page.evaluate(
+          ({ top, travel, progress }) =>
+            scrollTo({ top: top + travel * progress, behavior: "instant" }),
+          { ...geometry, progress },
+        );
+        await expect
+          .poll(() =>
+            scene.evaluate(
+              (el) =>
+                new DOMMatrix(
+                  getComputedStyle(el.querySelector(".scene-progress > span")!)
+                    .transform,
+                ).a,
+            ),
+          )
+          .toBeCloseTo(progress, 3);
+        frames.push(
+          await scene.evaluate((el) => ({
+            active: [
+              ...el.querySelectorAll<HTMLElement>(".inspiration-slide"),
+            ].findIndex((slide) => slide.dataset.active === "true"),
+            scales: [...el.querySelectorAll(".inspiration-slide img")].map(
+              (image) => {
+                const matrix = new DOMMatrix(getComputedStyle(image).transform);
+                return Math.hypot(matrix.a, matrix.b);
+              },
+            ),
+          })),
+        );
+      }
+      expect(frames[1].active).toBe(frames[0].active + Number(changesStage));
+      for (let i = 0; i < frames[0].scales.length; i++) {
+        expect(
+          Math.abs(frames[1].scales[i] - frames[0].scales[i]),
+        ).toBeLessThan(0.001);
+        expect(frames[2].scales[i]).toBeCloseTo(frames[0].scales[i], 5);
+      }
+      expect(frames[2].active).toBe(frames[0].active);
+    }
+  });
+
+  test(`gallery dominance, caption, story and accessibility agree through pauses and reversals at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 1004 });
+    await page.goto("/");
+    await page.evaluate(() => document.fonts.ready);
+    const scene = page.locator(".inspiration-scene");
+    await expect(scene).toHaveAttribute("data-scene-ready", "");
+    const geometry = await scene.evaluate((el) => ({
+      top: el.getBoundingClientRect().top + scrollY,
+      travel:
+        (el as HTMLElement).offsetHeight -
+        (el.querySelector(".inspiration-sticky") as HTMLElement).offsetHeight,
+    }));
+    const read = () =>
+      scene.evaluate((el) => {
+        const slides = [
+          ...el.querySelectorAll<HTMLElement>(".inspiration-slide"),
+        ];
+        // Read the actual painted masks independently of the motion helper.
+        const reveals = slides.map((slide) => {
+          const art = slide.querySelector(".craft-art")!;
+          const clip = getComputedStyle(art).clipPath;
+          if (clip === "none") return 1;
+          const inset = clip.match(
+            /^inset\(([-\d.]+)(%|px)(?:\s+[-\d.]+(?:%|px)?){0,3}\)$/,
+          );
+          if (!inset) throw new Error(`Unexpected clip: ${clip}`);
+          return (
+            1 -
+            Number(inset[1]) /
+              (inset[2] === "%" ? 100 : art.getBoundingClientRect().height)
+          );
+        });
+        const fractions = [
+          reveals[0] - reveals[1],
+          reveals[1] - reveals[2],
+          reveals[2],
+        ];
+        const indices = (
+          selector: string,
+          match: (element: HTMLElement) => boolean,
+        ) =>
+          [...el.querySelectorAll<HTMLElement>(selector)].flatMap(
+            (element, i) => (match(element) ? [i] : []),
+          );
+        const rendered = (element: HTMLElement) => {
+          const style = getComputedStyle(element);
+          return (
+            style.display !== "none" &&
+            style.visibility === "visible" &&
+            Number(style.opacity) > 0 &&
+            element.getBoundingClientRect().height > 0
+          );
+        };
+        return {
+          progress: new DOMMatrix(
+            getComputedStyle(el.querySelector(".scene-progress > span")!)
+              .transform,
+          ).a,
+          fractions,
+          active: indices(
+            ".inspiration-slide",
+            (slide) => slide.dataset.active === "true",
+          ),
+          accessible: indices(
+            ".inspiration-slide",
+            (slide) => slide.getAttribute("aria-hidden") === "false",
+          ),
+          visibleLayers: indices(
+            ".inspiration-slide",
+            (slide) => slide.dataset.visible === "true",
+          ),
+          captions: indices(".inspiration-slide figcaption", rendered),
+          story: indices(
+            ".scene-story",
+            (story) => story.dataset.active === "true",
+          ),
+          accessibleStory: indices(
+            ".scene-story",
+            (story) => story.getAttribute("aria-hidden") === "false",
+          ),
+          renderedStory: indices(".scene-story", rendered),
+          current: indices(
+            ".scene-step",
+            (step) => step.getAttribute("aria-current") === "step",
+          ),
+          indicator: new DOMMatrix(
+            getComputedStyle(el.querySelector(".scene-progress > span")!)
+              .transform,
+          ).a,
+          scales: slides.map(
+            (slide) =>
+              new DOMMatrix(
+                getComputedStyle(slide.querySelector("img")!).transform,
+              ).a,
+          ),
+        };
+      });
+    const stops = [
+      [0, 0],
+      [0.2595, 0],
+      [0.2605, 1],
+      [0.28, 1],
+      [0.68, 1],
+      [0.7195, 1],
+      [0.7205, 2],
+      [1, 2],
+    ] as const;
+    const snapshots = new Map<number, Awaited<ReturnType<typeof read>>>();
+    const evidence = [];
+    for (const [direction, positions] of [
+      ["forward", stops],
+      ["reverse", [...stops].reverse()],
+      [
+        "jump",
+        [
+          [1, 2],
+          [0, 0],
+          [1, 2],
+          [0.68, 1],
+          [0.28, 1],
+        ],
+      ],
+    ] as const) {
+      for (const [progress, index] of positions) {
+        await page.evaluate(
+          ({ top, travel, progress }) =>
+            scrollTo({ top: top + travel * progress, behavior: "instant" }),
+          { ...geometry, progress },
+        );
+        await expect
+          .poll(async () => (await read()).progress)
+          .toBeCloseTo(progress, 3);
+        const paint = await read();
+        expect(paint.fractions.every(Number.isFinite)).toBe(true);
+        const dominant = paint.fractions.reduce(
+          (winner, fraction, i, all) => (fraction >= all[winner] ? i : winner),
+          0,
+        );
+        expect(dominant).toBe(index);
+        for (const state of [
+          paint.active,
+          paint.accessible,
+          paint.captions,
+          paint.story,
+          paint.accessibleStory,
+          paint.renderedStory,
+          paint.current,
+        ])
+          expect(state).toEqual([index]);
+        expect(paint.indicator).toBeCloseTo(paint.progress, 5);
+        if (progress === 0.28) {
+          expect(paint.visibleLayers).toEqual([0, 1]);
+          expect(paint.fractions[1]).toBeCloseTo(4 / 7, 2);
+        }
+        if (progress === 0.68) {
+          expect(paint.visibleLayers).toEqual([0, 1, 2]);
+          expect(paint.fractions[2]).toBeCloseTo(5 / 14, 2);
+        }
+        if (direction === "forward") snapshots.set(progress, paint);
+        else expect(paint).toEqual(snapshots.get(progress));
+        evidence.push({
+          direction,
+          requested: progress,
+          expected: index,
+          ...paint,
+        });
+        if (
+          direction !== "jump" &&
+          (progress === 0.28 ||
+            progress === 0.68 ||
+            (direction === "forward" && progress > 0 && progress < 1))
+        ) {
+          await page.screenshot({
+            path: testInfo.outputPath(`${width}-${direction}-${progress}.png`),
+          });
+        }
+      }
+    }
+    const evidencePath = testInfo.outputPath(`${width}-dominance.json`);
+    writeFileSync(
+      evidencePath,
+      JSON.stringify(
+        { viewport: { width, height: 1004 }, geometry, evidence },
+        null,
+        2,
+      ),
+    );
+    await testInfo.attach("dominance-pauses-and-reversals", {
+      path: evidencePath,
+      contentType: "application/json",
+    });
+  });
+}
+
+test("gallery resets after resize and policy changes, and internal links restore its current position", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1004 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const scene = page.locator(".inspiration-scene");
+  const seekDetail = async () => {
+    await expect(scene).toHaveAttribute("data-scene-ready", "");
+    await scene.evaluate((el) => {
+      const travel =
+        (el as HTMLElement).offsetHeight -
+        (el.querySelector(".inspiration-sticky") as HTMLElement).offsetHeight;
+      scrollTo({
+        top: el.getBoundingClientRect().top + scrollY + travel * 0.68,
+        behavior: "instant",
+      });
+    });
+    await expect(scene.locator('.scene-step[aria-current="step"]')).toHaveText(
+      "02 · Detalle",
+    );
+    await expect(
+      scene.locator('.inspiration-slide[aria-hidden="false"]'),
+    ).toHaveCount(1);
+  };
+  const expectFlow = async (reason: string) => {
+    await expect(scene).toHaveAttribute("data-scene-reason", reason);
+    await expect(scene).not.toHaveAttribute("data-scene-ready", "");
+    await expect(
+      scene.locator(
+        ".inspiration-slide[aria-hidden], .inspiration-slide[data-active], .inspiration-slide[data-visible], .scene-step[aria-current], .scene-story[aria-hidden]",
+      ),
+    ).toHaveCount(0);
+    const paint = await scene.evaluate((el) => ({
+      position: getComputedStyle(el.querySelector(".inspiration-sticky")!)
+        .position,
+      progress: (el.querySelector(".scene-progress > span") as HTMLElement)
+        .style.transform,
+      figures: [...el.querySelectorAll<HTMLElement>(".inspiration-slide")].map(
+        (slide) => ({
+          reveal: (slide.querySelector(".craft-art") as HTMLElement).style
+            .clipPath,
+          scale: (slide.querySelector("img") as HTMLElement).style.transform,
+          clip: getComputedStyle(slide.querySelector(".craft-art")!).clipPath,
+          transform: getComputedStyle(slide.querySelector("img")!).transform,
+          caption: getComputedStyle(slide.querySelector("figcaption")!)
+            .visibility,
+          height: slide.getBoundingClientRect().height,
+        }),
+      ),
+    }));
+    expect(paint.position).toBe("static");
+    expect(paint.progress).toBe("");
+    expect(paint.figures).toHaveLength(3);
+    for (const figure of paint.figures) {
+      expect(figure).toMatchObject({
+        reveal: "",
+        scale: "",
+        clip: "none",
+        transform: "none",
+        caption: "visible",
+      });
+      expect(figure.height).toBeGreaterThan(0);
+    }
+  };
+  await seekDetail();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectFlow("viewport-width");
+  await page.getByRole("link", { name: "Inspiración", exact: true }).click();
+  await page.screenshot({ path: testInfo.outputPath("390-844-flow.png") });
+  await page.setViewportSize({ width: 1440, height: 500 });
+  await expectFlow("viewport-height");
+  await page.setViewportSize({ width: 1440, height: 1004 });
+  await seekDetail();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await setPolicy(page, "system");
+  await expectFlow("reduced-motion");
+  await setPolicy(page, "always");
+  await seekDetail();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await setPolicy(page, "system");
+  await seekDetail();
+  await page
+    .getByRole("link", { name: "AR crafts · inicio", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      scene.evaluate(
+        (el) =>
+          new DOMMatrix(
+            getComputedStyle(el.querySelector(".scene-progress > span")!)
+              .transform,
+          ).a,
+      ),
+    )
+    .toBe(0);
+  await page.getByRole("link", { name: "Inspiración", exact: true }).click();
+  await expect(page).toHaveURL(/#galeria$/);
+  await expect(scene.locator('.scene-step[aria-current="step"]')).toHaveText(
+    "01 · Pieza",
+  );
+});
+
 test("the pinned hero scales and rotates with scroll, then restores its original transform", async ({
   page,
 }) => {
@@ -278,9 +890,7 @@ test("the pinned hero scales and rotates with scroll, then restores its original
       const svg = el.querySelector(".butterfly-svg")!;
       const transform = new DOMMatrix(getComputedStyle(svg).transform);
       return {
-        progress: Number(
-          getComputedStyle(el).getPropertyValue("--hero-progress"),
-        ),
+        progress: (Math.hypot(transform.a, transform.b) - 1) / 0.28,
         scale: Math.hypot(transform.a, transform.b),
         angle: Math.atan2(transform.b, transform.a),
         transform: getComputedStyle(svg).transform,
@@ -343,9 +953,12 @@ test("a hero barely fitting the viewport stays pinned without scroll or layout o
           ready: el.hasAttribute("data-hero-ready"),
           height: (el as HTMLElement).offsetHeight,
           scroll: scrollY,
-          progress: Number(
-            getComputedStyle(el).getPropertyValue("--hero-progress"),
-          ),
+          progress: (() => {
+            const m = new DOMMatrix(
+              getComputedStyle(el.querySelector(".butterfly-svg")!).transform,
+            );
+            return (Math.hypot(m.a, m.b) - 1) / 0.28;
+          })(),
           heading: bounds("h1"),
           actions: bounds(".hero-actions"),
         });
@@ -362,14 +975,21 @@ test("a hero barely fitting the viewport stays pinned without scroll or layout o
     await expect
       .poll(() =>
         hero.evaluate((el) =>
-          Number(getComputedStyle(el).getPropertyValue("--hero-progress")),
+          (() => {
+            const m = new DOMMatrix(
+              getComputedStyle(el.querySelector(".butterfly-svg")!).transform,
+            );
+            return (Math.hypot(m.a, m.b) - 1) / 0.28;
+          })(),
         ),
       )
       .toBeCloseTo(ratio, 2);
+    const actualDestination = await page.evaluate(() => scrollY);
+    expect(Math.abs(actualDestination - destination)).toBeLessThanOrEqual(1);
     for (const sample of await readFrames()) {
       expect(sample.ready).toBe(true);
       expect(sample.height).toBe(geometry.height);
-      expect(sample.scroll).toBeCloseTo(Math.round(destination), 0);
+      expect(sample.scroll).toBe(actualDestination);
       expect(sample.progress).toBeCloseTo(ratio, 2);
       expect(sample.heading.top).toBeGreaterThanOrEqual(0);
       expect(sample.heading.bottom).toBeLessThan(viewportHeight);

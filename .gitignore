@@ -30,3 +30,7 @@ manifest.json
 apps/web/public/demo/
 .codex/
 .agents/
+# Local design audits, evidence and installed skill inventory.
+plans/
+.impeccable/
+skills-lock.json
