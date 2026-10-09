@@ -29,6 +29,8 @@ Para volver a probar: modifica el texto publicado, espera el guardado, compara *
 
 ## Qué edita cada sección
 
+El refinamiento floral de la web añade entradas de texto, imágenes y navegación y un fondo decorativo. Se aplica al mostrar contenido publicado o de vista previa; los campos y el flujo de edición de Studio se conservan. Los saltos de línea del título siguen siendo editables y las imágenes conservan su texto alternativo. El patrón y los acentos son recursos de identidad de la web y no son campos nuevos de Sanity. Véase [el plan de implementación y validación](../web/FLORAL-MOTION.md).
+
 | Parte de la web                 | Dónde editar                                                          | Qué probar                                                                      |
 | ------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Hero                            | Página → Portada                                                      | Título, descripción, texto móvil y texto superior de escritorio                 |

@@ -128,6 +128,8 @@ test("a distant active branch stops identical writes at both clamps and restores
       ),
     );
   await settledScroll(page, 0);
+  // Isolate scroll writes from legitimate invalidations by late lazy assets.
+  await page.waitForLoadState("networkidle");
   const branch = page.locator('.branch-1440[data-branch="6"]');
   await expect(branch).toHaveAttribute("data-grown", "0");
   const geometry = await branch.evaluate((el) => ({

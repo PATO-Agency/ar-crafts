@@ -18,6 +18,15 @@ vi.mock("next/image", () => ({
 vi.mock("./motion", () => ({ CraftMotion: () => null }));
 afterEach(cleanup);
 const content = toCraftPageContent(arCraftsFixture, { demo: true });
+function expectHeadingLines(
+  container: HTMLElement,
+  selector: string,
+  lines: string[],
+) {
+  const heading = container.querySelector(selector)!;
+  expect(heading.textContent).toBe(lines.join(""));
+  expect(heading.querySelectorAll("br")).toHaveLength(lines.length - 1);
+}
 describe("craft behavior", () => {
   it("renders editorial section copy and multiline headings while retaining omitted defaults", () => {
     const pageCopy = {
@@ -106,12 +115,11 @@ describe("craft behavior", () => {
     ]) {
       expect(screen.getByText(text)).toBeTruthy();
     }
-    expect(container.querySelector("#workshops-title")?.innerHTML).toBe(
-      "Creamos<br>juntos",
-    );
-    expect(container.querySelector("#materials-title")?.innerHTML).toBe(
-      "Tu selección<br>de materiales",
-    );
+    expectHeadingLines(container, "#workshops-title", ["Creamos", "juntos"]);
+    expectHeadingLines(container, "#materials-title", [
+      "Tu selección",
+      "de materiales",
+    ]);
     expect(container.querySelector(".journey-card h3")?.innerHTML).toBe(
       "Aprende<br>con Adriana",
     );
@@ -130,15 +138,18 @@ describe("craft behavior", () => {
       ),
     ).toContain("Versión de revisión · sin publicación comercial.");
     expect(screen.getByText("CREA · APRENDE · INSPÍRATE")).toBeTruthy();
-    expect(container.querySelector("#workshops-title")?.innerHTML).toBe(
-      "Tu creatividad,<br>cuenta por cuenta.",
-    );
-    expect(container.querySelector("#materials-title")?.innerHTML).toBe(
-      "Cada detalle abre<br>una posibilidad.",
-    );
-    expect(container.querySelector("#faq-title")?.innerHTML).toBe(
-      "Toda creación<br>empieza con una pregunta.",
-    );
+    expectHeadingLines(container, "#workshops-title", [
+      "Tu creatividad,",
+      "cuenta por cuenta.",
+    ]);
+    expectHeadingLines(container, "#materials-title", [
+      "Cada detalle abre",
+      "una posibilidad.",
+    ]);
+    expectHeadingLines(container, "#faq-title", [
+      "Toda creación",
+      "empieza con una pregunta.",
+    ]);
     expect(screen.getByText("Ideas que florecen.")).toBeTruthy();
     expect(
       screen.getByText("Una forma de la naturaleza se convierte en una pieza."),

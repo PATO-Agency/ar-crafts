@@ -6,6 +6,7 @@
 - foliage: cuatro recorridos completos, uno por anchura. Son referencias de curvas, entradas, salidas y distribución; no fondos de altura fija para cualquier contenido.
 - conceptual: tres talleres, tres materiales, tres imágenes de galería y una ilustración editorial. No son productos reales ni fotografías del negocio.
 - photography-guide: cuatro esquemas de encuadre, solo referencia para fotos autorizadas.
+- floral-pattern.svg: patrón vectorial creado en código para el refinamiento del 9 de octubre de 2026. Flores de seis pétalos, tallos y hojas en la paleta vigente; no procede de una fotografía ni representa productos. Los dos acentos relacionados se dibujan en `floral-backdrop.tsx`.
 
 ## Preparación para web
 
@@ -17,4 +18,4 @@ Los IDs exportados son nombres de capa y pueden repetirse; normalizar/namespacea
 
 Figma redondea algunos viewBox/dimensiones de exportación. El mapa mantiene medidas originales con decimales. Las fuentes no se incluyen como binarios: usar las familias aprobadas mediante la infraestructura de fuentes del repo, verificar licencia/origen al incorporar archivos.
 
-Sin JS/reduced motion/fallo de inicialización, todos los motivos completos deben permanecer visibles. Las guías y los assets de demo no reemplazan la fotografía real aprobada; omitir galería de producción si no existe.
+Sin JS o ante fallo de inicialización, todos los motivos completos deben permanecer visibles. Por decisión expresa del usuario del 9 de octubre de 2026, la web conserva las animaciones incluso con movimiento reducido solicitado por el sistema. Las guías y los assets de demo no reemplazan la fotografía real aprobada; omitir galería de producción si no existe.

@@ -6,6 +6,9 @@ import { MaterialsSection } from "./materials-section";
 import { ContactLink } from "./contact-link";
 import { Botanical } from "./botanical";
 import { CraftMotion } from "./motion";
+import { CraftFloralMotion } from "./floral-motion";
+import { FloralBackdrop, FloralAccent } from "./floral-backdrop";
+import { HeadingLines } from "./motion-heading";
 import { ButterflyArtwork } from "./butterfly-artwork";
 import { WorkshopDate } from "./workshop-date";
 import { LegalLinks } from "../legal/legal-links";
@@ -39,6 +42,7 @@ export function CraftPageView({
   ];
   return (
     <div className="ar-site" id="inicio" data-motion-policy="always">
+      <FloralBackdrop />
       <a className="skip-link" href="#contenido">
         Saltar al contenido
       </a>
@@ -115,14 +119,17 @@ export function CraftPageView({
           className="ar-section journeys"
           aria-labelledby="journey-title"
         >
+          <FloralAccent className="journeys-flower" />
           <p className="eyebrow">
             {copy?.journeys?.eyebrow ?? "ENCUENTRA TU FORMA DE CREAR"}
           </p>
           <h2 id="journey-title">
-            {titleLines(
-              copy?.journeys?.title ??
-                "Una idea puede convertirse en algo hermoso.",
-            )}
+            <HeadingLines
+              text={
+                copy?.journeys?.title ??
+                "Una idea puede convertirse en algo hermoso."
+              }
+            />
           </h2>
           <div className="journey-grid">
             <a href="#talleres" className="journey-card">
@@ -167,9 +174,12 @@ export function CraftPageView({
               {copy?.workshops?.eyebrow ?? "01 / APRENDE A CREAR"}
             </p>
             <h2 id="workshops-title">
-              {titleLines(
-                copy?.workshops?.title ?? "Tu creatividad,\ncuenta por cuenta.",
-              )}
+              <HeadingLines
+                text={
+                  copy?.workshops?.title ??
+                  "Tu creatividad,\ncuenta por cuenta."
+                }
+              />
             </h2>
             <p>
               {copy?.workshops?.text ??
@@ -241,10 +251,12 @@ export function CraftPageView({
                   {copy?.about?.eyebrow ?? "LA ESENCIA DE AR CRAFTS"}
                 </p>
                 <h2>
-                  {titleLines(
-                    copy?.about?.title ??
-                      "La naturaleza inspira. Tus manos transforman.",
-                  )}
+                  <HeadingLines
+                    text={
+                      copy?.about?.title ??
+                      "La naturaleza inspira. Tus manos transforman."
+                    }
+                  />
                 </h2>
                 <p className="section-heading__description">
                   {content.about.text}
@@ -283,9 +295,9 @@ export function CraftPageView({
                         "UN UNIVERSO DE PEQUEÑOS DETALLES"}
                     </p>
                     <h2 id="inspiration-title">
-                      {titleLines(
-                        copy?.inspiration?.title ?? "Ideas que florecen.",
-                      )}
+                      <HeadingLines
+                        text={copy?.inspiration?.title ?? "Ideas que florecen."}
+                      />
                     </h2>
                     <p>
                       {copy?.inspiration?.text ??
@@ -353,10 +365,12 @@ export function CraftPageView({
                 {copy?.faq?.eyebrow ?? "ANTES DE EMPEZAR"}
               </p>
               <h2 id="faq-title">
-                {titleLines(
-                  copy?.faq?.title ??
-                    "Toda creación\nempieza con una pregunta.",
-                )}
+                <HeadingLines
+                  text={
+                    copy?.faq?.title ??
+                    "Toda creación\nempieza con una pregunta."
+                  }
+                />
               </h2>
               <p>
                 {copy?.faq?.text ??
@@ -382,13 +396,16 @@ export function CraftPageView({
           aria-labelledby="contact-title"
         >
           <div className="contact-garden">
+            <FloralAccent className="contact-flower" />
             <p className="eyebrow">
               {copy?.contact?.eyebrow ?? "DALE FORMA A TU PRÓXIMA IDEA"}
             </p>
             <h2 id="contact-title">
-              {titleLines(
-                copy?.contact?.title ?? "Algo hermoso\npuede empezar aquí.",
-              )}
+              <HeadingLines
+                text={
+                  copy?.contact?.title ?? "Algo hermoso\npuede empezar aquí."
+                }
+              />
             </h2>
             <p>
               {copy?.contact?.text ??
@@ -441,6 +458,7 @@ export function CraftPageView({
         </div>
       </footer>
       <CraftMotion />
+      <CraftFloralMotion content={content} />
     </div>
   );
 }

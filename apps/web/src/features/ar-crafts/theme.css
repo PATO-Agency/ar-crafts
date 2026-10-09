@@ -86,6 +86,52 @@ section {
 }
 .ar-site {
   overflow-x: clip;
+  position: relative;
+  isolation: isolate;
+  --motion-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+}
+.floral-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url("/ar-crafts/floral-pattern.svg") repeat;
+  background-size: 300px 540px;
+  opacity: 0.24;
+  mask-image: linear-gradient(
+    to right,
+    #000,
+    transparent 28%,
+    transparent 72%,
+    #000
+  );
+}
+.motion-line {
+  display: inline-block;
+  max-width: 100%;
+}
+.floral-accent {
+  position: absolute;
+  width: 140px;
+  height: 190px;
+  color: var(--color-leaf);
+  opacity: 0.65;
+  pointer-events: none;
+}
+.floral-accent [data-floral-petals] {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.floral-heart {
+  stroke: var(--color-gold);
+}
+.journeys-flower {
+  right: var(--gutter);
+  top: 18px;
+}
+.contact-flower {
+  right: 28px;
+  bottom: 24px;
 }
 .sr-only {
   position: absolute;
@@ -150,8 +196,24 @@ section {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  position: relative;
 }
-.desktop-nav > a:hover,
+.desktop-nav > a:not(.button)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 5px;
+  height: 1px;
+  background: var(--color-leaf);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms var(--motion-arrive);
+}
+.desktop-nav > a:not(.button):focus-visible::after {
+  transform: scaleX(1);
+}
+.desktop-nav > .button:hover,
 .text-link:hover {
   text-decoration: underline;
   text-underline-offset: 6px;
@@ -176,12 +238,19 @@ section {
   text-align: center;
   width: fit-content;
   max-width: 100%;
+  transition:
+    background-color 160ms ease-out,
+    transform 160ms ease-out;
 }
 .button:hover {
   background: var(--color-sage);
 }
 .button:active {
   background: var(--color-border);
+  transform: scale(0.98);
+}
+.button:disabled:active {
+  transform: none;
 }
 .button.primary {
   background: var(--color-primary);
@@ -338,11 +407,16 @@ section {
   color: var(--color-muted);
 }
 .journeys {
+  position: relative;
   padding-top: 56px;
   padding-bottom: 64px;
   display: flex;
   flex-direction: column;
   gap: 30px;
+}
+.journeys > h2,
+.journeys > .eyebrow {
+  max-width: calc(100% - 144px);
 }
 .journey-grid {
   display: grid;
@@ -668,6 +742,7 @@ section {
   color: var(--color-muted);
 }
 .contact-garden {
+  position: relative;
   background: var(--color-sage);
   border-radius: 24px;
   padding: 48px;
@@ -675,6 +750,21 @@ section {
   flex-direction: column;
   align-items: flex-start;
   gap: 24px;
+}
+.contact-garden > h2,
+.contact-garden > p {
+  max-width: min(75ch, calc(100% - 140px));
+}
+@media (hover: hover) and (pointer: fine) {
+  .desktop-nav > a:not(.button):hover::after {
+    transform: scaleX(1);
+  }
+  :is(.craft-card, .essence, .gallery-extra) .craft-art img {
+    transition: transform 680ms var(--motion-arrive);
+  }
+  :is(.craft-card, .essence, .gallery-extra) .craft-art:hover img {
+    transform: scale(1.035);
+  }
 }
 .contact-garden > p {
   color: var(--color-muted);
@@ -880,6 +970,25 @@ section {
   .mobile-menu summary::-webkit-details-marker {
     display: none;
   }
+  .menu-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .menu-icon path {
+    transform-origin: center;
+    transition:
+      transform 180ms ease-out,
+      opacity 140ms ease-out;
+  }
+  .mobile-menu[open] .menu-icon path:first-child {
+    transform: rotate(45deg) translateY(5px);
+  }
+  .mobile-menu[open] .menu-icon path:nth-child(2) {
+    opacity: 0;
+  }
+  .mobile-menu[open] .menu-icon path:last-child {
+    transform: rotate(-45deg) translateY(-5px);
+  }
   .mobile-menu[open] {
     width: 100%;
   }
@@ -930,6 +1039,39 @@ section {
   }
 }
 @media (max-width: 767px) {
+  .floral-backdrop {
+    opacity: 0.18;
+    background-size: 240px 432px;
+    mask-image: linear-gradient(
+      to right,
+      #000,
+      transparent 20%,
+      transparent 80%,
+      #000
+    );
+  }
+  .floral-accent {
+    width: 74px;
+    height: 100px;
+    opacity: 0.5;
+  }
+  .journeys-flower {
+    top: 20px;
+    right: 8px;
+  }
+  .journeys > .eyebrow {
+    max-width: calc(100% - 64px);
+  }
+  .journeys > h2,
+  .contact-garden > h2,
+  .contact-garden > p {
+    max-width: 100%;
+  }
+  .contact-flower {
+    right: 8px;
+    bottom: 8px;
+    opacity: 0.18;
+  }
   :root {
     --gutter: 24px;
   }

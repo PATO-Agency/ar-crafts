@@ -245,6 +245,14 @@ El [contexto histórico](../../CONTEXT.md) contemplaba retención máxima de ram
 
 El [refinamiento previo](../../docs/delivery/landing-refinement-2026-10-05.md) guarda pruebas y capturas de escritorio y móvil emulado. Este paso documental solo contrastó código y estilos calculados; no repitió la suite ni certificó rendimiento, contraste completo o hardware móvil.
 
+## Refinamiento floral — 2026-10-09
+
+Dirección aprobada y desarrollada en [FLORAL-MOTION.md](FLORAL-MOTION.md). Se conservan paleta, tipografía, mariposa y ramas existentes. El fondo incorpora un patrón vectorial estático de flores de seis pétalos, tallos y hojas, con opacidad 0.24 en escritorio y 0.18 en móvil; una máscara despeja el centro. Dos acentos, en caminos y contacto, trazan su tallo una sola vez al entrar y despliegan pétalos sin bucle.
+
+Los títulos mantienen saltos editoriales y texto semántico: cada línea entra en 560 ms, con retraso total máximo de 120 ms. Introducciones: 420 ms; marco de imágenes: 680 ms mediante máscara discreta, sin transformar las fotografías que controla Inspiración. Hover de fotografías fuera de esa escena: escala 1.035 solo con cursor preciso. El contenido base siempre es visible; APIs ausentes, errores y desmontaje cancelan efectos sin dejar estilos persistentes. Cambios de contenido reinicializan las entradas; pestaña oculta cancela las animaciones finitas.
+
+El menú conserva `details/summary` nativo. Con Web Animations API abre en 220 ms y cierra en 140 ms, admite interrupción, restaura el foco al pulsar Escape y cierra inmediatamente al seguir un enlace para conservar el destino del ancla. Icono SVG de tres trazos con transición a cierre; subrayado de navegación de escritorio en 220 ms y feedback de pulsación de botones en 160 ms. Por preferencia expresa del usuario, la política `always` aplica también con movimiento reducido. Sin cambios de Studio o del contrato de contenido.
+
 ## Do's and Don'ts
 
 ### Do:

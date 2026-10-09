@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { HeadingLines } from "./motion-heading";
 import type { CraftPageCopy } from "@ar-crafts/content";
 import type { ContactModel, MaterialModel } from "./model";
 import { ContactLink } from "./contact-link";
@@ -56,14 +56,9 @@ export function MaterialsSection({
           {copy?.eyebrow ?? "02 / ENCUENTRA TUS MATERIALES"}
         </p>
         <h2 id="materials-title">
-          {(copy?.title ?? "Cada detalle abre\nuna posibilidad.")
-            .split("\n")
-            .map((line, index) => (
-              <Fragment key={index}>
-                {index > 0 && <br />}
-                {line}
-              </Fragment>
-            ))}
+          <HeadingLines
+            text={copy?.title ?? "Cada detalle abre\nuna posibilidad."}
+          />
         </h2>
         <p>
           {copy?.text ??
