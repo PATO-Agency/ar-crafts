@@ -4,12 +4,14 @@ Esta guía describe el código y la operación editorial que se entregan para re
 
 ## Código y versión entregable
 
-El repositorio contiene la web (`apps/web`), Studio (`apps/studio`), contratos compartidos (`packages`), recursos preparados, pruebas y `package-lock.json`. Web y Studio se mantienen en la misma fuente versionada. La entrega debe identificarse por un commit completo o un tag que resuelva a ese commit; registrar también la URL del repositorio y el despliegue editorial asociado. El operador añadirá los identificadores y resultados verificados al cerrar la entrega: esta guía no presupone que el push, el tag o el despliegue ya existan.
+El repositorio [PATO-Agency/ar-crafts](https://github.com/PATO-Agency/ar-crafts/tree/codex/editorial) contiene la web (`apps/web`), Studio (`apps/studio`), contratos compartidos (`packages`), recursos preparados, pruebas y `package-lock.json`. Web y Studio se mantienen en la misma fuente versionada. La versión de esta entrega se identifica con el tag `editorial-2026-10-09`; consultar su commit en GitHub antes de instalar o restaurar.
+
+El primer despliegue desde GitHub se verificó el 9 de octubre de 2026: código `c37c5dbb8151fd1d804aac9e1015e054792d54fa`, despliegue Vercel `dpl_EZ4WGzpcutTccqgPfRLJTieuudk6`, estado `READY`, rama `codex/editorial` y [URL editorial protegida](https://ar-crafts-editorial.vercel.app). [GitHub Actions](https://github.com/PATO-Agency/ar-crafts/actions/runs/37892062435) aprobó sincronización legal, lint, tipos, 355 unidades, comprobación de patrones de secretos y builds desde un clon limpio. Localmente pasaron además 32 pruebas focalizadas de Chrome: layout editorial, documentos legales y movimiento. En el despliegue se comprobaron las cuatro páginas legales, el aviso de cookies, el controlador de movimiento con `reduce` emulado y la protección anónima (HTTP 302). Las actualizaciones de documentación posteriores conservan el mismo código de aplicación.
 
 ```sh
 git clone --branch codex/editorial https://github.com/PATO-Agency/ar-crafts.git
 cd ar-crafts
-git checkout <COMMIT_O_TAG_DE_ENTREGA>
+git checkout editorial-2026-10-09
 npm ci
 npm run check
 ```
@@ -43,7 +45,7 @@ Por decisión expresa del usuario del 9 de octubre de 2026, las animaciones perm
 | Demo       | `ar-crafts-demo`, `main`                 | Fixture             | Demo interna, sin APIs editoriales            |
 | Editorial  | `ar-crafts-editorial`, `codex/editorial` | Sanity privado      | Protección de Vercel en todos los despliegues |
 
-Los proyectos usan Root Directory `apps/web`, con acceso a las fuentes compartidas fuera de esa carpeta, Node `22.x`, instalación `cd ../.. && npm ci --no-fund` y build `npm run build` desde `apps/web`. `apps/web/vercel.json` es común y neutral: las variables de cada proyecto determinan `fixture` o `sanity`. El comando de builds ignorados de cada proyecto omite las ramas ajenas a su superficie. La rama editorial no se fusiona automáticamente a `main`; verificar proyecto, rama, commit y entorno antes de promover un despliegue. El enlace Git editorial y el primer despliegue deben verificarse y registrarse al cerrar la entrega.
+Los proyectos usan Root Directory `apps/web`, con acceso a las fuentes compartidas fuera de esa carpeta, Node `22.x`, instalación `cd ../.. && npm ci --no-fund` y build `npm run build` desde `apps/web`. `apps/web/vercel.json` es común y neutral: las variables de cada proyecto determinan `fixture` o `sanity`. El comando de builds ignorados de cada proyecto omite las ramas ajenas a su superficie. Ambos enlaces Git y sus ramas de producción se verificaron el 9 de octubre de 2026. La rama editorial no se fusiona automáticamente a `main`; verificar proyecto, rama, commit y entorno antes de promover un despliegue.
 
 En la demo, configurar `AR_REMOTE_DEMO=enabled`, `AR_CONTENT_SOURCE=fixture` y `PATO_SITE_VISIBILITY=internal`. En editorial usar el perfil alojado documentado en [el runbook](apps/studio/AR-CRAFTS-CMS-RUNBOOK.md) y conservar autenticación efectiva antes de Next, CSP y noindex. No retirar protección para resolver Presentation. Publicar contenido en Sanity no cambia el fixture de la demo.
 
@@ -70,14 +72,14 @@ Conservar Markdown y JSON sincronizados en el mismo commit. Los textos son borra
 
 ## Inventario de acceso y titularidad
 
-| Recurso                      | Identidad conocida                                              | Cierre pendiente                                                                               |
-| ---------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Código                       | Repositorio `PATO-Agency/ar-crafts`                             | Confirmar titular contractual, acceso de la cuenta del cliente y commit/tag entregado          |
-| Demo                         | `ar-crafts-demo.vercel.app`                                     | Confirmar responsable de operación y facturación                                               |
-| Web editorial                | `ar-crafts-editorial.vercel.app`                                | Verificar enlace Git, rama de producción, despliegue y acceso protegido con cuenta del cliente |
-| Sanity                       | Proyecto `dbk6sgbx`, dataset privado `ar-crafts-editorial-test` | Confirmar titularidad, plan, cuentas invitadas, roles y backup acordado                        |
-| Studio                       | `ar-crafts-editorial-test.sanity.studio`                        | Validar edición/publicación/Presentation con cuenta propia del cliente                         |
-| Dominio comercial y contacto | Sin confirmar                                                   | Identidad, dominio, canales, jurisdicción y contenido definitivo                               |
+| Recurso                      | Identidad conocida                                              | Cierre pendiente                                                                      |
+| ---------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Código                       | Repositorio `PATO-Agency/ar-crafts`                             | Confirmar titular contractual, acceso de la cuenta del cliente y commit/tag entregado |
+| Demo                         | `ar-crafts-demo.vercel.app`                                     | Confirmar responsable de operación y facturación                                      |
+| Web editorial                | `ar-crafts-editorial.vercel.app`, Git `codex/editorial`         | Validar acceso protegido con cuenta propia del cliente                                |
+| Sanity                       | Proyecto `dbk6sgbx`, dataset privado `ar-crafts-editorial-test` | Confirmar titularidad, plan, cuentas invitadas, roles y backup acordado               |
+| Studio                       | `ar-crafts-editorial-test.sanity.studio`                        | Validar edición/publicación/Presentation con cuenta propia del cliente                |
+| Dominio comercial y contacto | Sin confirmar                                                   | Identidad, dominio, canales, jurisdicción y contenido definitivo                      |
 
 No se han acreditado cuentas o invitaciones del cliente por esta guía. La sesión del desarrollador no es un acceso entregable. Registrar responsables y transferencias en un canal privado acordado, sin añadir credenciales a este inventario.
 
