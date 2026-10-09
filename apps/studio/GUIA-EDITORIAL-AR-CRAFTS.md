@@ -1,6 +1,6 @@
 # Probar edición, preview y publicación como AR Crafts
 
-Actualizado el 9 de octubre de 2026. Este ensayo usa el dataset privado de prueba y la web editorial protegida. Se conservó el hero que ya habías publicado y se preparó una **base publicada con todas las secciones**: tres talleres, tres ediciones ficticias, ocho materiales visibles y uno oculto, tres imágenes de Inspiración y cuatro preguntas. Contacto permanece sin confirmar. Nada de esto constituye contenido comercial definitivo ni cambia la demo.
+Actualizado el 9 de octubre de 2026. Este ensayo usa el dataset privado de prueba y la web editorial publicada para lectura del cliente. Se conservó el hero que ya habías publicado y se preparó una **base publicada con todas las secciones**: tres talleres, tres ediciones ficticias, ocho materiales visibles y uno oculto, tres imágenes de Inspiración y cuatro preguntas. Contacto permanece sin confirmar. Nada de esto constituye contenido comercial definitivo ni cambia la demo.
 
 ## Las dos vistas
 
@@ -75,7 +75,7 @@ Repite en cada caso **editar → guardar borrador → refrescar Presentation →
 
 ## Límites de esta prueba
 
-Studio ya tiene una superficie alojada en Sanity y puede usarse desde otro dispositivo sin mantener una terminal local. La cuenta propia del cliente, su invitación, sus roles y el acceso protegido a la web editorial siguen pendientes de verificación. No compartir URLs de preview con parámetros privados. La rama `editorial` versiona web y Studio; publicar código en Vercel no publica Studio ni cambia documentos de Sanity. Consulta [ENTREGA.md](../../ENTREGA.md) para el inventario de entrega.
+Studio ya tiene una superficie alojada en Sanity y puede usarse desde otro dispositivo sin mantener una terminal local. La cuenta propia del cliente, su invitación, sus roles siguen pendientes de verificación; la lectura de la web publicada ya está habilitada sin cuenta de Vercel. No compartir URLs de preview con parámetros privados. La rama `editorial` versiona web y Studio; publicar código en Vercel no publica Studio ni cambia documentos de Sanity. Consulta [ENTREGA.md](../../ENTREGA.md) para el inventario de entrega.
 
 La base de ensayo se deja disponible y no se limpia automáticamente. Registro actual como evidencia interna local, no requerido para instalación: `docs/delivery/client-trial-full-2026-10-07/prepared.json`; conserva el registro histórico de la primera prueba solo del hero. Las comprobaciones técnicas no acreditan que hayas revisado o aprobado este contenido. T1/T9 y la aprobación humana editorial/global siguen pendientes.
 
@@ -88,3 +88,9 @@ node --env-file=.env.ar-crafts-editorial-hosted.local --experimental-strip-types
 Configuración y diagnóstico técnico: [runbook CMS](AR-CRAFTS-CMS-RUNBOOK.md).
 
 Por decisión expresa del usuario del 9 de octubre de 2026, las animaciones permanecen activas en demo, publicado y preview incluso si el sistema solicita reducir movimiento. Al revisar contenido, comprobar también ese caso y la disponibilidad del contenido si la inicialización falla.
+
+## Acceso de revisión para el cliente · 9 de octubre de 2026
+
+Por solicitud del usuario, https://ar-crafts-editorial.vercel.app/ permite revisar el contenido publicado sin cuenta de Vercel desde otro dispositivo. Standard Protection protege las otras URLs de despliegue. La demo https://ar-crafts-demo.vercel.app/ también se revisa sin cuenta. Ambas conservan noindex y contacto por confirmar.
+
+Este acceso solo permite consultar la web. Studio y el dataset privado conservan sus permisos; la entrada a borradores exige un secreto válido y el webhook conserva firma y validación de origen. PATO_HOSTED_INTERNAL_PREVIEW=authenticated permanece como configuración heredada del runtime y no autentica a los lectores de la URL principal. La invitación del cliente a Studio sigue pendiente. Los textos, fechas y fotografías de stock del CMS continúan siendo datos de ensayo, y las políticas legales son borradores.

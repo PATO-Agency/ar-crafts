@@ -23,4 +23,4 @@ Rutas incorporadas: `/legal/terminos-y-condiciones`, `/legal/privacidad`, `/lega
 
 Para finalizar, el operador debe completar su identidad y mercados, confirmar sus procedimientos y aprobar las condiciones comerciales. Después corresponde actualizar la investigación para los países confirmados, comprobar el dominio definitivo y revisar conjuntamente los cuatro documentos.
 
-Los cuatro Markdown canónicos de esta carpeta y este índice se incluyen selectivamente en la entrega versionada de `codex/editorial`. El resto de `docs/` y `work/` conserva evidencia interna local excluida de Git. El versionado técnico no implica aprobación legal ni lanzamiento comercial. Consulta [ENTREGA.md](../../ENTREGA.md) para reproducir el código y completar los pendientes de titularidad.
+Los cuatro Markdown canónicos de esta carpeta y este índice se incluyen selectivamente en la entrega versionada de `editorial`. El resto de `docs/` y `work/` conserva evidencia interna local excluida de Git. El versionado técnico no implica aprobación legal ni lanzamiento comercial. Consulta [ENTREGA.md](../../ENTREGA.md) para reproducir el código y completar los pendientes de titularidad.

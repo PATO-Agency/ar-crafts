@@ -2,7 +2,7 @@
 
 Next.js App Router sirve la landing. `AR_CONTENT_SOURCE=fixture` es la demo por defecto; `sanity` usa exclusivamente el proyecto/dataset configurado para AR Crafts. Los nombres `@pato-food/*` identifican infraestructura compartida y no autorizan reutilizar datos o credenciales de VicaFoods.
 
-El 2026-10-06 se comprobó conexión real con `dbk6sgbx/ar-crafts-editorial-test`, dataset privado. La web editorial está en `https://ar-crafts-editorial.vercel.app`, separada de la demo, con protección de Vercel en todos los despliegues. Sigue el [runbook de CMS](../studio/AR-CRAFTS-CMS-RUNBOOK.md) y las plantillas [local](../../config/ar-crafts-editorial.env.example) y [alojada](../../config/ar-crafts-editorial-hosted.env.example). La configuración anterior a la creación del proyecto era preparación, no evidencia integrada.
+El 2026-10-06 se comprobó conexión real con `dbk6sgbx/ar-crafts-editorial-test`, dataset privado. La web editorial está en `https://ar-crafts-editorial.vercel.app`, separada de la demo, con lectura pública en su URL principal y protección de Vercel en las otras URLs de despliegue. Sigue el [runbook de CMS](../studio/AR-CRAFTS-CMS-RUNBOOK.md) y las plantillas [local](../../config/ar-crafts-editorial.env.example) y [alojada](../../config/ar-crafts-editorial-hosted.env.example). La configuración anterior a la creación del proyecto era preparación, no evidencia integrada.
 
 ## Lectura y preview
 
@@ -26,7 +26,7 @@ Los opcionales vacíos conservan estados pendientes. Una imagen suministrada nec
 
 Caché publicado: etiqueta `ar-crafts`, TTL 300 segundos y `revalidateTag(tag, "max")` con stale while revalidate. HTTP 200 no prueba frescura: medir cuándo la respuesta web contiene el cambio.
 
-La demo `AR_REMOTE_DEMO=enabled` exige fixture y bloquea APIs editoriales. No modificar `vercel.json` para abrir CMS. El perfil local usa web 3001 y Studio 3334. La superficie alojada existente tiene protección efectiva del proveedor, comprobada desde contextos anónimos. `PATO_HOSTED_INTERNAL_PREVIEW=authenticated`, noindex y Draft Mode no proporcionan autenticación general. El ensayo añade el bypass de automatización únicamente al origen editorial exacto; no lo reenvía a otros orígenes.
+La demo `AR_REMOTE_DEMO=enabled` exige fixture y bloquea APIs editoriales. No modificar `vercel.json` para abrir CMS. El perfil local usa web 3001 y Studio 3334. La URL principal aloja contenido publicado de lectura pública; las otras URLs conservan protección del proveedor. `PATO_HOSTED_INTERNAL_PREVIEW=authenticated`, noindex y Draft Mode no proporcionan autenticación general. El ensayo añade el bypass de automatización únicamente al origen editorial exacto; no lo reenvía a otros orígenes.
 
 Publicación, modificación y despublicación observadas con caché caliente y entrega real de Sanity. La prueba secuencial midió 9,621 s, 8,599 s y 8,874 s desde inicio de acción hasta primera respuesta HTML esperada; son observaciones de esta ejecución, no SLA ni actualización inmediata. El 2026-10-07 se verificó un reintento automático real del mismo mensaje, HTTP 503 → 200, recuperación del HTML, restauración del rol y limpieza. La deduplicación conserva cobertura simulada diferenciada.
 
@@ -47,3 +47,9 @@ Los originales versionados están en `docs/legal/`; `npm run legal:sync` genera 
 El aviso global de cookies enlaza la política y permite «Cerrar aviso». El cierre vive en memoria y se mantiene durante navegación interna; reaparece tras recarga. No guarda cookies, localStorage ni sessionStorage ni activa analítica/publicidad. Es un aviso informativo, no un gestor de consentimiento por categorías. La política de cookies describe este comportamiento.
 
 Validación local: lint, tipos, 355 pruebas unitarias, 7 pruebas legales Chrome y build web satisfactorios. Chrome comprobó lectura a 320/390/768/1440 px, navegación, teclado, tablas, noindex y acceso sin JavaScript. El 9 de octubre de 2026 se publicó esta integración desde GitHub en el entorno editorial protegido y se verificaron sus cuatro páginas legales y el aviso de cookies. Consulta [la entrega](../../ENTREGA.md) para identificar la versión. Siguen pendientes las políticas comerciales definitivas.
+
+## Acceso de revisión para el cliente · 9 de octubre de 2026
+
+Por solicitud del usuario, https://ar-crafts-editorial.vercel.app/ permite revisar el contenido publicado sin cuenta de Vercel desde otro dispositivo. Standard Protection protege las otras URLs de despliegue. La demo https://ar-crafts-demo.vercel.app/ también se revisa sin cuenta. Ambas conservan noindex y contacto por confirmar.
+
+Este acceso solo permite consultar la web. Studio y el dataset privado conservan sus permisos; la entrada a borradores exige un secreto válido y el webhook conserva firma y validación de origen. PATO_HOSTED_INTERNAL_PREVIEW=authenticated permanece como configuración heredada del runtime y no autentica a los lectores de la URL principal. La invitación del cliente a Studio sigue pendiente. Los textos, fechas y fotografías de stock del CMS continúan siendo datos de ensayo, y las políticas legales son borradores.

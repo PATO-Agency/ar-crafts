@@ -1,6 +1,6 @@
 # Entrega técnica de AR Crafts
 
-Esta guía describe el código y la operación editorial que se entregan para revisión. La rama de fuente es `editorial`; `main` conserva la demo. La entrega no acredita lanzamiento comercial, aprobación legal ni acceso del cliente hasta completar los pendientes indicados aquí.
+Esta guía describe el código y la operación editorial que se entregan para revisión. La rama de fuente es `editorial`; `main` conserva la demo. La entrega no acredita lanzamiento comercial, aprobación legal ni acceso de edición del cliente hasta completar los pendientes indicados aquí.
 
 ## Código y versión entregable
 
@@ -42,14 +42,14 @@ Por decisión expresa del usuario del 9 de octubre de 2026, las animaciones perm
 
 ## Dos proyectos Vercel, una fuente
 
-| Superficie | Proyecto y rama de producción      | Fuente de contenido | Acceso                                        |
-| ---------- | ---------------------------------- | ------------------- | --------------------------------------------- |
-| Demo       | `ar-crafts-demo`, `main`           | Fixture             | Demo interna, sin APIs editoriales            |
-| Editorial  | `ar-crafts-editorial`, `editorial` | Sanity privado      | Protección de Vercel en todos los despliegues |
+| Superficie | Proyecto y rama de producción      | Fuente de contenido | Acceso                                                         |
+| ---------- | ---------------------------------- | ------------------- | -------------------------------------------------------------- |
+| Demo       | `ar-crafts-demo`, `main`           | Fixture             | Demo interna, sin APIs editoriales                             |
+| Editorial  | `ar-crafts-editorial`, `editorial` | Sanity privado      | URL principal de lectura pública; otros despliegues protegidos |
 
 Los proyectos usan Root Directory `apps/web`, con acceso a las fuentes compartidas fuera de esa carpeta, Node `22.x`, instalación `cd ../.. && npm ci --no-fund` y build `npm run build` desde `apps/web`. `apps/web/vercel.json` es común y neutral: las variables de cada proyecto determinan `fixture` o `sanity`. El comando de builds ignorados de cada proyecto omite las ramas ajenas a su superficie. Ambos enlaces Git y sus ramas de producción se verificaron el 9 de octubre de 2026. La rama editorial no se fusiona automáticamente a `main`; verificar proyecto, rama, commit y entorno antes de promover un despliegue.
 
-En la demo, configurar `AR_REMOTE_DEMO=enabled`, `AR_CONTENT_SOURCE=fixture` y `PATO_SITE_VISIBILITY=internal`. En editorial usar el perfil alojado documentado en [el runbook](apps/studio/AR-CRAFTS-CMS-RUNBOOK.md) y conservar autenticación efectiva antes de Next, CSP y noindex. No retirar protección para resolver Presentation. Publicar contenido en Sanity no cambia el fixture de la demo.
+En la demo, configurar `AR_REMOTE_DEMO=enabled`, `AR_CONTENT_SOURCE=fixture` y `PATO_SITE_VISIBILITY=internal`. En editorial usar el perfil alojado documentado en [el runbook](apps/studio/AR-CRAFTS-CMS-RUNBOOK.md) y conservar Standard Protection en las otras URLs, CSP y noindex. La lectura pública de la URL principal fue autorizada para presentar el sitio al cliente; Studio y los borradores siguen requiriendo sus credenciales o secretos. Publicar contenido en Sanity no cambia el fixture de la demo.
 
 ## Configuración privada y Studio
 
@@ -78,7 +78,7 @@ Conservar Markdown y JSON sincronizados en el mismo commit. Los textos son borra
 | ---------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Código                       | Repositorio `PATO-Agency/ar-crafts`                             | Confirmar titular contractual, acceso de la cuenta del cliente y commit/tag entregado |
 | Demo                         | `ar-crafts-demo.vercel.app`                                     | Confirmar responsable de operación y facturación                                      |
-| Web editorial                | `ar-crafts-editorial.vercel.app`, Git `editorial`               | Validar acceso protegido con cuenta propia del cliente                                |
+| Web editorial                | `ar-crafts-editorial.vercel.app`, Git `editorial`               | Lectura web sin cuenta habilitada; confirmar responsable de operación                 |
 | Sanity                       | Proyecto `dbk6sgbx`, dataset privado `ar-crafts-editorial-test` | Confirmar titularidad, plan, cuentas invitadas, roles y backup acordado               |
 | Studio                       | `ar-crafts-editorial-test.sanity.studio`                        | Validar edición/publicación/Presentation con cuenta propia del cliente                |
 | Dominio comercial y contacto | Sin confirmar                                                   | Identidad, dominio, canales, jurisdicción y contenido definitivo                      |
@@ -86,3 +86,9 @@ Conservar Markdown y JSON sincronizados en el mismo commit. Los textos son borra
 No se han acreditado cuentas o invitaciones del cliente por esta guía. La sesión del desarrollador no es un acceso entregable. Registrar responsables y transferencias en un canal privado acordado, sin añadir credenciales a este inventario.
 
 Los registros en `plans/`, `docs/delivery/` y `work/` son evidencia interna local histórica, no requisitos para instalar o compilar un clon. La entrega reproducible se apoya en el código, el lock, las plantillas públicas y estas guías. Los resultados técnicos históricos conservan sus límites y no acreditan aprobación humana global, contenido definitivo ni lanzamiento comercial.
+
+## Acceso de revisión para el cliente · 9 de octubre de 2026
+
+Por solicitud del usuario, https://ar-crafts-editorial.vercel.app/ permite revisar el contenido publicado sin cuenta de Vercel desde otro dispositivo. Standard Protection protege las otras URLs de despliegue. La demo https://ar-crafts-demo.vercel.app/ también se revisa sin cuenta. Ambas conservan noindex y contacto por confirmar.
+
+Este acceso solo permite consultar la web. Studio y el dataset privado conservan sus permisos; la entrada a borradores exige un secreto válido y el webhook conserva firma y validación de origen. PATO_HOSTED_INTERNAL_PREVIEW=authenticated permanece como configuración heredada del runtime y no autentica a los lectores de la URL principal. La invitación del cliente a Studio sigue pendiente. Los textos, fechas y fotografías de stock del CMS continúan siendo datos de ensayo, y las políticas legales son borradores.
