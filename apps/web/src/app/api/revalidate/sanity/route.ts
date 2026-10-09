@@ -3,7 +3,7 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   parseSanityOperation,
-  tagsForWebhook,
+  tagsForArWebhook,
 } from "../../../../lib/revalidation";
 import { privateHeaders } from "../../../../lib/preview-security";
 import {
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
       400,
       "Invalid Sanity operation",
     );
-  const tags = tagsForWebhook(parsed);
+  const tags = tagsForArWebhook(parsed);
   if (!tags)
     return reject(request, "unsupported_document", 400, "Unsupported document");
   const documentId = (parsed as { _id: string })._id;

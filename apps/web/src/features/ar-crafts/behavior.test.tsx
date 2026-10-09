@@ -6,6 +6,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { arCraftsFixture } from "@ar-crafts/content";
 import { createWhatsAppClickPayload } from "@pato-food/analytics";
 import { MaterialsSection } from "./materials-section";
+import { CraftPageView } from "./page-view";
 import { contactUrl } from "./contact-link";
 import { toCraftPageContent } from "./to-page-content";
 import { branchProgress, sceneTimeline } from "./motion-math";
@@ -14,9 +15,138 @@ vi.mock("next/image", () => ({
     <img alt={String(props.alt)} src={String(props.src)} />
   ),
 }));
+vi.mock("./motion", () => ({ CraftMotion: () => null }));
 afterEach(cleanup);
 const content = toCraftPageContent(arCraftsFixture, { demo: true });
 describe("craft behavior", () => {
+  it("renders editorial section copy and multiline headings while retaining omitted defaults", () => {
+    const pageCopy = {
+      hero: {
+        mobileEyebrow: "CREAMOS CONTIGO",
+        secondary: "Crea un recuerdo",
+        scrollCue: "Descubre la colección",
+      },
+      journeys: {
+        eyebrow: "TU SIGUIENTE PROYECTO",
+        title: "Elige tu camino",
+        workshop: {
+          title: "Aprende\ncon Adriana",
+          text: "Técnicas para empezar",
+        },
+        materials: {
+          title: "Elige tus cuentas",
+          text: "Materiales para tu proyecto",
+        },
+      },
+      workshops: {
+        eyebrow: "NUEVOS TALLERES",
+        title: "Creamos\njuntos",
+        text: "Explora los talleres disponibles",
+      },
+      materials: {
+        eyebrow: "INSUMOS ARTESANALES",
+        title: "Tu selección\nde materiales",
+        text: "Encuentra tus próximos colores",
+      },
+      about: { eyebrow: "NUESTRA HISTORIA", title: "Crear con intención" },
+      inspiration: {
+        eyebrow: "IDEAS PARA CREAR",
+        title: "Nuestra inspiración",
+        text: "Una mirada al proceso",
+        stories: {
+          piece: "El inicio de una pieza",
+          detail: "El cuidado de cada detalle",
+          hands: "Manos que crean",
+        },
+      },
+      faq: {
+        eyebrow: "TE ACOMPAÑAMOS",
+        title: "Resolvemos tus dudas",
+        text: "Lo que necesitas saber",
+      },
+      contact: {
+        eyebrow: "CONVERSEMOS",
+        title: "Cuéntanos tu idea",
+        text: "Consulta con Adriana",
+      },
+      footer: { text: "Creado con cariño\nAR Crafts" },
+    };
+    const edited = toCraftPageContent(
+      { ...arCraftsFixture, site: { ...arCraftsFixture.site, pageCopy } },
+      { demo: true },
+    );
+    expect(edited.pageCopy).toEqual(pageCopy);
+    const { container } = render(<CraftPageView content={edited} />);
+    for (const text of [
+      "Crea un recuerdo",
+      "Descubre la colección",
+      "TU SIGUIENTE PROYECTO",
+      "Elige tu camino",
+      "Técnicas para empezar",
+      "Elige tus cuentas",
+      "Materiales para tu proyecto",
+      "NUEVOS TALLERES",
+      "Explora los talleres disponibles",
+      "INSUMOS ARTESANALES",
+      "Encuentra tus próximos colores",
+      "NUESTRA HISTORIA",
+      "Crear con intención",
+      "IDEAS PARA CREAR",
+      "Nuestra inspiración",
+      "Una mirada al proceso",
+      "El inicio de una pieza",
+      "El cuidado de cada detalle",
+      "Manos que crean",
+      "TE ACOMPAÑAMOS",
+      "Resolvemos tus dudas",
+      "Lo que necesitas saber",
+      "CONVERSEMOS",
+      "Cuéntanos tu idea",
+      "Consulta con Adriana",
+    ]) {
+      expect(screen.getByText(text)).toBeTruthy();
+    }
+    expect(container.querySelector("#workshops-title")?.innerHTML).toBe(
+      "Creamos<br>juntos",
+    );
+    expect(container.querySelector("#materials-title")?.innerHTML).toBe(
+      "Tu selección<br>de materiales",
+    );
+    expect(container.querySelector(".journey-card h3")?.innerHTML).toBe(
+      "Aprende<br>con Adriana",
+    );
+    expect(container.querySelector(".site-footer p")?.innerHTML).toBe(
+      "Creado con cariño<br>AR Crafts",
+    );
+    expect(screen.getByText(arCraftsFixture.site.about!.text)).toBeTruthy();
+    expect(screen.getByText("CREAMOS CONTIGO")).toBeTruthy();
+  });
+  it("preserves legacy section defaults and their exact line breaks without page copy", () => {
+    const { container } = render(<CraftPageView content={content} />);
+    expect(content.pageCopy).toBeUndefined();
+    expect(
+      renderToStaticMarkup(
+        <CraftPageView content={{ ...content, demo: false }} />,
+      ),
+    ).toContain("Versión de revisión · sin publicación comercial.");
+    expect(screen.getByText("CREA · APRENDE · INSPÍRATE")).toBeTruthy();
+    expect(container.querySelector("#workshops-title")?.innerHTML).toBe(
+      "Tu creatividad,<br>cuenta por cuenta.",
+    );
+    expect(container.querySelector("#materials-title")?.innerHTML).toBe(
+      "Cada detalle abre<br>una posibilidad.",
+    );
+    expect(container.querySelector("#faq-title")?.innerHTML).toBe(
+      "Toda creación<br>empieza con una pregunta.",
+    );
+    expect(screen.getByText("Ideas que florecen.")).toBeTruthy();
+    expect(
+      screen.getByText("Una forma de la naturaleza se convierte en una pieza."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Pequeños detalles. Infinitas posibilidades."),
+    ).toBeTruthy();
+  });
   it.each([0, 6, 12])(
     "shows a disclosure only for more than six materials (%s)",
     (count) => {

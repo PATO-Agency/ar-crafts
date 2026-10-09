@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+// Legacy VicaFoods harness. AR Crafts uses verify-ar-crafts-editorial-flow.ts.
 import { createClient, type SanityClient } from "@sanity/client";
 import { encodeSignatureHeader } from "@sanity/webhook";
 import {

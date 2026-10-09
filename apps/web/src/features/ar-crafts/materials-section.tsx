@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+import type { CraftPageCopy } from "@ar-crafts/content";
 import type { ContactModel, MaterialModel } from "./model";
 import { ContactLink } from "./contact-link";
 import { CraftArtwork } from "./artwork";
@@ -34,9 +36,11 @@ export function MaterialCard({
   );
 }
 export function MaterialsSection({
+  copy,
   materials,
   contact,
 }: {
+  copy?: CraftPageCopy["materials"];
   materials: MaterialModel[];
   contact: ContactModel;
 }) {
@@ -48,14 +52,22 @@ export function MaterialsSection({
       aria-labelledby="materials-title"
     >
       <div className="section-heading">
-        <p className="eyebrow">02 / ENCUENTRA TUS MATERIALES</p>
+        <p className="eyebrow">
+          {copy?.eyebrow ?? "02 / ENCUENTRA TUS MATERIALES"}
+        </p>
         <h2 id="materials-title">
-          Cada detalle abre
-          <br />
-          una posibilidad.
+          {(copy?.title ?? "Cada detalle abre\nuna posibilidad.")
+            .split("\n")
+            .map((line, index) => (
+              <Fragment key={index}>
+                {index > 0 && <br />}
+                {line}
+              </Fragment>
+            ))}
         </h2>
         <p>
-          Colores, hilos y herramientas para dar forma a tu próxima creación.
+          {copy?.text ??
+            "Colores, hilos y herramientas para dar forma a tu próxima creación."}
         </p>
       </div>
       {!materials.length ? (

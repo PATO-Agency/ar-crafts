@@ -42,25 +42,30 @@ export function toCraftPageContent(
     unavailable,
     hero: content.site.hero,
     about: content.site.about,
+    pageCopy: content.site.pageCopy,
     contact: demo ? { confirmed: false } : content.site.contact,
     workshops: content.workshops.map((workshop) => {
-      const edition = content.editions
+      const editions = content.editions
         .filter(
           (e) =>
             e.workshopId.replace(/^drafts\./, "") ===
               workshop.id.replace(/^drafts\./, "") && isUpcomingEdition(e, now),
         )
-        .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))[0];
+        .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+      const schedule = editions.map((edition) => ({
+        endsAt: edition.endsAt,
+        dateLabel:
+          new Intl.DateTimeFormat("es-PE", {
+            dateStyle: "long",
+            timeStyle: "short",
+            timeZone: "America/Lima",
+          }).format(new Date(edition.startsAt)) + " · hora de Lima",
+      }));
       return {
         ...workshop,
         priceLabel: money(workshop.price),
-        dateLabel: edition
-          ? new Intl.DateTimeFormat("es-PE", {
-              dateStyle: "long",
-              timeStyle: "short",
-              timeZone: "America/Lima",
-            }).format(new Date(edition.startsAt)) + " · hora de Lima"
-          : "Próxima fecha por confirmar",
+        dateLabel: schedule[0]?.dateLabel ?? "Próxima fecha por confirmar",
+        ...(!demo && !preview ? { editionSchedule: schedule } : {}),
         contactMessage: `Hola, quisiera consultar por el taller ${workshop.title.replace(/\n/g, " ")}.`,
       };
     }),

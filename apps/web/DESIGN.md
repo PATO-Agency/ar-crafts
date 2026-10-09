@@ -197,7 +197,7 @@ El hero móvil adopta la opción B elegida y aprobada por el usuario el 2026-10-
 
 Las dos rutas y nuestra esencia pasan a una columna en móvil. Las tarjetas y preguntas crecen con el contenido. El foco no modifica sus dimensiones. La galería base tiene tres columnas desde 1024 px, dos entre 768 y 1023 px y una en móvil.
 
-Inspiración mejorada se activa desde 820 px bajo la política de demo `always`, o desde 1024 px bajo `system`, si hay tres etapas completas, wrapper válido, al menos 600 px de alto y layout candidato no mayor al 92% del viewport. El tramo mide 300vh; el sticky comienza en 4vh. Desde 1100 px, narrativa e imagen comparten dos columnas. Cuando no se cumplen las condiciones, todas las imágenes permanecen en el flujo.
+Inspiración mejorada se activa desde 820 px bajo la política predeterminada `always` para demo, contenido editorial y vista previa, o desde 1024 px bajo el fallback opcional `system`, si hay tres etapas completas, wrapper válido, al menos 600 px de alto y layout candidato no mayor al 92% del viewport. El tramo mide 300vh; el sticky comienza en 4vh. Desde 1100 px, narrativa e imagen comparten dos columnas. Cuando no se cumplen las condiciones, todas las imágenes permanecen en el flujo.
 
 Las cuatro familias botánicas cambian en 360, 768 y 1024 px, con SVG preparados para 320/390/768/1440. Las curvas se ajustan a la altura real de los bloques. Ramas decorativas: fuera de interacción, detrás del contenido y con recorte intencional en el borde del viewport. Ajustar su presencia cuando compitan con lectura o acciones, sin sustituirlas por un borde vertical rígido.
 
@@ -235,7 +235,7 @@ Cada tallo se dibuja por longitud y cada hoja brota/repliega tras su punto de un
 
 Inspiración sigue pieza → detalle → manos, con título/pasos estables, máscaras progresivas, zoom continuo y una etapa semántica activa. Retroceder restaura el mismo estado por posición. Scroll nativo: sin capturar rueda, invertir dirección ni obligar a completar etapas.
 
-La política demo `always` mantiene estas animaciones incluso con reduced motion activo, por una decisión de revisión registrada en README y en la sección 12 de la evidencia. `system` respeta movimiento reducido: motivos completos, sin escena fijada ni transforms de crecimiento. Sin JS o ante fallo de inicialización se conserva contenido visible en flujo. No extrapolar la excepción de demo como regla de accesibilidad para producción.
+El 2026-10-09 el usuario amplió la política `always` a todas las fuentes de contenido y a los próximos proyectos web: las animaciones permanecen activas incluso con reduced motion. Ya no se limita a revisión de la demo. `system` conserva internamente la opción de respetar movimiento reducido: motivos completos, sin escena fijada ni transforms de crecimiento. Sin JS o ante fallo de inicialización se conserva contenido visible en flujo. No se modifican los ajustes del navegador ni del sistema operativo.
 
 ### Fuentes, discrepancias y comprobación
 

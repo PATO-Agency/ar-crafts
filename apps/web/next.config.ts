@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 import { frameAncestorsDirective } from "./src/lib/framing-policy";
 
-const frameAncestors = frameAncestorsDirective(process.env.PATO_STUDIO_ORIGIN);
+const frameAncestors = frameAncestorsDirective(
+  process.env.PATO_STUDIO_ORIGIN,
+  process.env.PATO_HOSTED_STUDIO_ORIGIN,
+);
 
 const config: NextConfig = {
   devIndicators: false,

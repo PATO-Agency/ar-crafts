@@ -53,3 +53,9 @@ export function tagsForWebhook(body: unknown): string[] | null {
     : undefined;
   return tag ? [tag] : null;
 }
+
+/** The active AR endpoint must not invalidate unrelated legacy food content. */
+export function tagsForArWebhook(body: unknown): string[] | null {
+  const tags = tagsForWebhook(body);
+  return tags?.[0] === "ar-crafts" ? tags : null;
+}

@@ -18,9 +18,11 @@ export function trustedStudioOrigin(value: string | undefined) {
     (!isHttps && !isLocalHttp) ||
     url.username ||
     url.password ||
+    url.hostname.includes("*") ||
     url.pathname !== "/" ||
     url.search ||
-    url.hash
+    url.hash ||
+    ![url.origin, `${url.origin}/`].includes(configured)
   )
     throw new Error(
       "PATO_STUDIO_ORIGIN must be an exact HTTPS origin or loopback HTTP origin",
@@ -29,7 +31,31 @@ export function trustedStudioOrigin(value: string | undefined) {
   return url.origin;
 }
 
-export function frameAncestorsDirective(studioOrigin: string | undefined) {
-  const trustedOrigin = trustedStudioOrigin(studioOrigin);
-  return `frame-ancestors 'self'${trustedOrigin ? ` ${trustedOrigin}` : ""}`;
+export function trustedHostedStudioOrigin(value: string | undefined) {
+  const trustedOrigin = trustedStudioOrigin(value);
+  if (!trustedOrigin) return undefined;
+  const url = new URL(trustedOrigin);
+  if (url.protocol !== "https:" || url.port || loopbackHosts.has(url.hostname))
+    throw new Error(
+      "PATO_HOSTED_STUDIO_ORIGIN must be an exact HTTPS origin without a port",
+    );
+  return trustedOrigin;
+}
+
+export function frameAncestorsDirective(
+  studioOrigin: string | undefined,
+  hostedStudioOrigin?: string,
+) {
+  const hostedOrigin = trustedHostedStudioOrigin(hostedStudioOrigin);
+  const origins = [
+    ...new Set(
+      [
+        trustedStudioOrigin(studioOrigin),
+        hostedOrigin,
+        // Hosted Studio is embedded by the Sanity organization dashboard.
+        hostedOrigin ? "https://www.sanity.io" : undefined,
+      ].filter((origin) => origin !== undefined),
+    ),
+  ];
+  return `frame-ancestors 'self'${origins.length ? ` ${origins.join(" ")}` : ""}`;
 }

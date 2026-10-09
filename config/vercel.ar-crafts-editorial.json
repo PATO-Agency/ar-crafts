@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "cd ../.. && npm ci --no-fund",
+  "buildCommand": "npm run build",
+  "env": {
+    "AR_CONTENT_SOURCE": "sanity",
+    "PATO_SITE_VISIBILITY": "internal"
+  },
+  "build": {
+    "env": {
+      "AR_CONTENT_SOURCE": "sanity",
+      "PATO_SITE_VISIBILITY": "internal"
+    }
+  }
+}

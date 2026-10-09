@@ -952,7 +952,7 @@ for (const [width, height, reducedMotion, reason] of [
     await page.emulateMedia({ reducedMotion });
     await page.setViewportSize({ width, height });
     await page.goto("/");
-    // Exercise the system policy separately from the always-animated demo.
+    // Exercise the optional system fallback separately from the default policy.
     await page.locator(".ar-site").evaluate((site) => {
       (site as HTMLElement).dataset.motionPolicy = "system";
       window.dispatchEvent(new Event("resize"));
@@ -983,7 +983,7 @@ for (const [width, height, reducedMotion, reason] of [
   });
 }
 
-test("the demo animates under reduced motion, including the narrow desktop preview", async ({
+test("the landing animates under reduced motion, including the narrow desktop preview", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });

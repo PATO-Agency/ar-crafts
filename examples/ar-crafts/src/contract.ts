@@ -6,16 +6,78 @@ import {
 } from "@pato-food/content-contract";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
-const editorial = editorialSchema.extend({ id: text(120) });
+export const arEditorialDateTimeSchema = z.string().datetime({ offset: true });
+const optionalText = (max: number) =>
+  z.preprocess(
+    (value) => (typeof value === "string" && !value.trim() ? undefined : value),
+    text(max).optional(),
+  );
+const editorial = editorialSchema
+  .extend({
+    id: text(120),
+    sourceObservedAt: arEditorialDateTimeSchema.optional(),
+    approvedAt: arEditorialDateTimeSchema.optional(),
+  })
+  .refine(
+    (value) => value.contentStatus !== "approved" || Boolean(value.approvedAt),
+    {
+      message: "Approved content requires an approval timestamp",
+      path: ["approvedAt"],
+    },
+  );
 export const craftImageSchema = imageSchema.extend({
   kind: z.enum(["illustration", "photograph"]),
 });
+const sectionCopySchema = z.object({
+  eyebrow: text(120).optional(),
+  title: text(180).optional(),
+  text: text(800).optional(),
+});
+const journeyCopySchema = z.object({
+  title: text(180).optional(),
+  text: text(800).optional(),
+});
+export const craftPageCopySchema = z.object({
+  hero: z
+    .object({
+      mobileEyebrow: text(120).optional(),
+      secondary: text(800).optional(),
+      scrollCue: text(800).optional(),
+    })
+    .optional(),
+  journeys: z
+    .object({
+      eyebrow: text(120).optional(),
+      title: text(180).optional(),
+      workshop: journeyCopySchema.optional(),
+      materials: journeyCopySchema.optional(),
+    })
+    .optional(),
+  workshops: sectionCopySchema.optional(),
+  materials: sectionCopySchema.optional(),
+  about: sectionCopySchema.omit({ text: true }).optional(),
+  faq: sectionCopySchema.optional(),
+  contact: sectionCopySchema.optional(),
+  inspiration: sectionCopySchema
+    .extend({
+      stories: z
+        .object({
+          piece: text(300).optional(),
+          detail: text(300).optional(),
+          hands: text(300).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  footer: z.object({ text: text(800).optional() }).optional(),
+});
+export type CraftPageCopy = z.infer<typeof craftPageCopySchema>;
 export const contactSchema = z.discriminatedUnion("confirmed", [
   z.object({ confirmed: z.literal(false) }),
   z.object({ confirmed: z.literal(true), destinationE164: e164Schema }),
 ]);
 export const editionSchema = editorial
-  .extend({
+  .safeExtend({
     workshopId: text(120),
     startsAt: z.string().datetime({ offset: true }),
     endsAt: z.string().datetime({ offset: true }),
@@ -25,36 +87,50 @@ export const editionSchema = editorial
     (v) => Date.parse(v.endsAt) > Date.parse(v.startsAt),
     "End must follow start",
   );
-export const workshopSchema = editorial.extend({
+export const workshopSchema = editorial.safeExtend({
   title: text(120),
   technique: text(60),
   details: text(600),
-  level: text(80).optional(),
-  mode: text(80).optional(),
+  level: optionalText(80),
+  mode: optionalText(80),
   price: z.number().positive().optional(),
   image: craftImageSchema.optional(),
 });
-export const materialSchema = editorial.extend({
+export const materialSchema = editorial.safeExtend({
   title: text(120),
   presentationLabel: text(160),
-  code: text(40).optional(),
+  code: optionalText(40),
   price: z.number().positive().optional(),
   image: craftImageSchema.optional(),
   status: z.enum(["inquiry", "unavailable", "hidden"]),
   featured: z.boolean(),
 });
-const gallerySchema = editorial.extend({
-  image: craftImageSchema,
-  caption: text(120),
-  step: z.enum(["piece", "detail", "hands"]),
+const gallerySchema = editorial
+  .safeExtend({
+    image: craftImageSchema,
+    caption: text(120),
+    step: z.enum(["piece", "detail", "hands"]),
+  })
+  .refine(
+    (value) =>
+      value.contentStatus !== "approved" ||
+      (value.image.kind === "photograph" && value.image.rightsConfirmed),
+    {
+      message: "Approved inspiration requires an authorized photograph",
+      path: ["image"],
+    },
+  );
+const faqSchema = editorial.safeExtend({
+  question: text(180),
+  answer: text(800),
 });
-const faqSchema = editorial.extend({ question: text(180), answer: text(800) });
-const siteSchema = editorial.extend({
+const siteSchema = editorial.safeExtend({
+  pageCopy: craftPageCopySchema.optional(),
   hero: z.object({
     eyebrow: text(120),
     title: text(160),
     text: text(500),
-    mobileText: text(500).optional(),
+    mobileText: optionalText(500),
   }),
   about: z
     .object({ text: text(800), image: craftImageSchema.optional() })

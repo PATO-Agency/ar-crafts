@@ -25,7 +25,7 @@ async function fetchCrafts(preview: boolean) {
     const content = parseCraftContent(
       await client.fetch(
         preview ? previewCraftQuery : publishedCraftQuery,
-        {},
+        { now: new Date().toISOString() },
         { cache: "no-store" },
       ),
     );
@@ -52,6 +52,8 @@ export async function getCraftPageContent(preview = false) {
     visibility: process.env.PATO_SITE_VISIBILITY,
     config: arCraftsConfig,
   });
+  preview =
+    preview && policy.source === "sanity" && policy.visibility === "internal";
   if (policy.source === "fixture")
     return toCraftPageContent(arCraftsFixture, { demo: true, preview });
   try {

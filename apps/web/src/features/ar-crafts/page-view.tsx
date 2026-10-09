@@ -1,4 +1,4 @@
-import { SectionHeading } from "@pato-food/ui";
+import { Fragment } from "react";
 import type { CraftPageContent } from "./model";
 import { CraftArtwork } from "./artwork";
 import { SiteHeader } from "./site-header";
@@ -7,6 +7,16 @@ import { ContactLink } from "./contact-link";
 import { Botanical } from "./botanical";
 import { CraftMotion } from "./motion";
 import { ButterflyArtwork } from "./butterfly-artwork";
+import { WorkshopDate } from "./workshop-date";
+import { LegalLinks } from "../legal/legal-links";
+
+const titleLines = (text: string) =>
+  text.split("\n").map((line, index) => (
+    <Fragment key={index}>
+      {index > 0 && <br />}
+      {line}
+    </Fragment>
+  ));
 
 export function CraftPageView({
   content,
@@ -15,6 +25,7 @@ export function CraftPageView({
   content: CraftPageContent;
   previewExitAvailable?: boolean;
 }) {
+  const copy = content.pageCopy;
   const sections = [
     { id: "talleres", label: "Talleres" },
     { id: "materiales", label: "Materiales" },
@@ -27,11 +38,7 @@ export function CraftPageView({
     ...(content.faq.length ? [{ id: "preguntas", label: "Preguntas" }] : []),
   ];
   return (
-    <div
-      className="ar-site"
-      id="inicio"
-      data-motion-policy={content.demo ? "always" : "system"}
-    >
+    <div className="ar-site" id="inicio" data-motion-policy="always">
       <a className="skip-link" href="#contenido">
         Saltar al contenido
       </a>
@@ -40,7 +47,7 @@ export function CraftPageView({
         <div className="hero-scene">
           <section className="hero" aria-labelledby="hero-title">
             <p className="eyebrow hero-mobile-eyebrow">
-              CREA · APRENDE · INSPÍRATE
+              {copy?.hero?.mobileEyebrow ?? "CREA · APRENDE · INSPÍRATE"}
             </p>
             <div className="hero-copy">
               <p className="eyebrow">{content.hero.eyebrow}</p>
@@ -74,10 +81,13 @@ export function CraftPageView({
                 </a>
               </div>
               <p className="secondary">
-                Pequeños detalles. Infinitas posibilidades.
+                {copy?.hero?.secondary ??
+                  "Pequeños detalles. Infinitas posibilidades."}
               </p>
               <p className="scroll-cue" aria-hidden="true">
-                <span>↓</span> Desliza. Mira cómo florecen las ideas.
+                <span>↓</span>{" "}
+                {copy?.hero?.scrollCue ??
+                  "Desliza. Mira cómo florecen las ideas."}
               </p>
             </div>
             <ButterflyArtwork />
@@ -105,33 +115,41 @@ export function CraftPageView({
           className="ar-section journeys"
           aria-labelledby="journey-title"
         >
-          <p className="eyebrow">ENCUENTRA TU FORMA DE CREAR</p>
+          <p className="eyebrow">
+            {copy?.journeys?.eyebrow ?? "ENCUENTRA TU FORMA DE CREAR"}
+          </p>
           <h2 id="journey-title">
-            Una idea puede convertirse en algo hermoso.
+            {titleLines(
+              copy?.journeys?.title ??
+                "Una idea puede convertirse en algo hermoso.",
+            )}
           </h2>
           <div className="journey-grid">
             <a href="#talleres" className="journey-card">
               <span className="eyebrow">01 / TALLERES</span>
               <h3>
-                Aprende a dar vida
-                <br />a tus ideas.
+                {titleLines(
+                  copy?.journeys?.workshop?.title ??
+                    "Aprende a dar vida\na tus ideas.",
+                )}
               </h3>
               <p>
-                Explora técnicas de joyería artesanal y crea con tus propias
-                manos.
+                {copy?.journeys?.workshop?.text ??
+                  "Explora técnicas de joyería artesanal y crea con tus propias manos."}
               </p>
               <span className="text-link">Conocer talleres ↗</span>
             </a>
             <a href="#materiales" className="journey-card pink">
               <span className="eyebrow">02 / MATERIALES</span>
               <h3>
-                Todo empieza
-                <br />
-                con una cuenta.
+                {titleLines(
+                  copy?.journeys?.materials?.title ??
+                    "Todo empieza\ncon una cuenta.",
+                )}
               </h3>
               <p>
-                Encuentra insumos para tus proyectos y descubre nuevas
-                posibilidades.
+                {copy?.journeys?.materials?.text ??
+                  "Encuentra insumos para tus proyectos y descubre nuevas posibilidades."}
               </p>
               <span className="text-link">Explorar materiales ↗</span>
             </a>
@@ -145,15 +163,17 @@ export function CraftPageView({
           aria-labelledby="workshops-title"
         >
           <div className="section-heading">
-            <p className="eyebrow">01 / APRENDE A CREAR</p>
+            <p className="eyebrow">
+              {copy?.workshops?.eyebrow ?? "01 / APRENDE A CREAR"}
+            </p>
             <h2 id="workshops-title">
-              Tu creatividad,
-              <br />
-              cuenta por cuenta.
+              {titleLines(
+                copy?.workshops?.title ?? "Tu creatividad,\ncuenta por cuenta.",
+              )}
             </h2>
             <p>
-              Explora técnicas de joyería artesanal y consulta por el próximo
-              taller.
+              {copy?.workshops?.text ??
+                "Explora técnicas de joyería artesanal y consulta por el próximo taller."}
             </p>
           </div>
           {!content.workshops.length ? (
@@ -168,7 +188,14 @@ export function CraftPageView({
                   <CraftArtwork image={workshop.image} />
                   <p className="eyebrow">{workshop.technique}</p>
                   <h3>{workshop.title}</h3>
-                  <p className="secondary">{workshop.dateLabel}</p>
+                  <WorkshopDate
+                    dateLabel={workshop.dateLabel}
+                    editions={
+                      content.demo || content.preview
+                        ? undefined
+                        : workshop.editionSchedule
+                    }
+                  />
                   <details className="workshop-details">
                     <summary>Detalles del taller</summary>
                     <p>{workshop.details}</p>
@@ -195,6 +222,7 @@ export function CraftPageView({
         </section>
         <Botanical index={2} />
         <MaterialsSection
+          copy={copy?.materials}
           materials={content.materials}
           contact={content.contact}
         />
@@ -208,11 +236,20 @@ export function CraftPageView({
           >
             <CraftArtwork image={content.about.image} />
             <div className="essence-copy">
-              <SectionHeading
-                eyebrow="LA ESENCIA DE AR CRAFTS"
-                title="La naturaleza inspira. Tus manos transforman."
-                text={content.about.text}
-              />
+              <div className="section-heading">
+                <p className="eyebrow">
+                  {copy?.about?.eyebrow ?? "LA ESENCIA DE AR CRAFTS"}
+                </p>
+                <h2>
+                  {titleLines(
+                    copy?.about?.title ??
+                      "La naturaleza inspira. Tus manos transforman.",
+                  )}
+                </h2>
+                <p className="section-heading__description">
+                  {content.about.text}
+                </p>
+              </div>
               <p className="brand-signature">Adriana Ravello</p>
               <p className="eyebrow">CREAR · APRENDER · COMPARTIR</p>
               <a className="button" href="#contacto">
@@ -241,11 +278,18 @@ export function CraftPageView({
               <div className="inspiration-sticky">
                 <div className="inspiration-narrative">
                   <div className="section-heading">
-                    <p className="eyebrow">UN UNIVERSO DE PEQUEÑOS DETALLES</p>
-                    <h2 id="inspiration-title">Ideas que florecen.</h2>
+                    <p className="eyebrow">
+                      {copy?.inspiration?.eyebrow ??
+                        "UN UNIVERSO DE PEQUEÑOS DETALLES"}
+                    </p>
+                    <h2 id="inspiration-title">
+                      {titleLines(
+                        copy?.inspiration?.title ?? "Ideas que florecen.",
+                      )}
+                    </h2>
                     <p>
-                      Naturaleza, color y textura como punto de partida para
-                      crear.
+                      {copy?.inspiration?.text ??
+                        "Naturaleza, color y textura como punto de partida para crear."}
                     </p>
                   </div>
                   <ol
@@ -261,13 +305,16 @@ export function CraftPageView({
                   </div>
                   <div className="scene-stories">
                     <p className="scene-story">
-                      Una forma de la naturaleza se convierte en una pieza.
+                      {copy?.inspiration?.stories?.piece ??
+                        "Una forma de la naturaleza se convierte en una pieza."}
                     </p>
                     <p className="scene-story">
-                      Acércate. Cada cuenta guarda un pequeño universo.
+                      {copy?.inspiration?.stories?.detail ??
+                        "Acércate. Cada cuenta guarda un pequeño universo."}
                     </p>
                     <p className="scene-story">
-                      El detalle cobra vida entre tus manos.
+                      {copy?.inspiration?.stories?.hands ??
+                        "El detalle cobra vida entre tus manos."}
                     </p>
                   </div>
                 </div>
@@ -302,15 +349,18 @@ export function CraftPageView({
             aria-labelledby="faq-title"
           >
             <div className="section-heading">
-              <p className="eyebrow">ANTES DE EMPEZAR</p>
+              <p className="eyebrow">
+                {copy?.faq?.eyebrow ?? "ANTES DE EMPEZAR"}
+              </p>
               <h2 id="faq-title">
-                Toda creación
-                <br />
-                empieza con una pregunta.
+                {titleLines(
+                  copy?.faq?.title ??
+                    "Toda creación\nempieza con una pregunta.",
+                )}
               </h2>
               <p>
-                Conversemos para encontrar el taller o los materiales que
-                necesitas.
+                {copy?.faq?.text ??
+                  "Conversemos para encontrar el taller o los materiales que necesitas."}
               </p>
             </div>
             {content.faq.map((item) => (
@@ -332,15 +382,17 @@ export function CraftPageView({
           aria-labelledby="contact-title"
         >
           <div className="contact-garden">
-            <p className="eyebrow">DALE FORMA A TU PRÓXIMA IDEA</p>
+            <p className="eyebrow">
+              {copy?.contact?.eyebrow ?? "DALE FORMA A TU PRÓXIMA IDEA"}
+            </p>
             <h2 id="contact-title">
-              Algo hermoso
-              <br />
-              puede empezar aquí.
+              {titleLines(
+                copy?.contact?.title ?? "Algo hermoso\npuede empezar aquí.",
+              )}
             </h2>
             <p>
-              Consulta por talleres o materiales y cuéntanos qué te gustaría
-              crear.
+              {copy?.contact?.text ??
+                "Consulta por talleres o materiales y cuéntanos qué te gustaría crear."}
             </p>
             <ContactLink
               contact={content.contact}
@@ -370,14 +422,21 @@ export function CraftPageView({
         </nav>
         <div>
           <p>
-            Inspiración botánica.
-            <br />
-            Arte en cada cuenta.
+            {titleLines(
+              copy?.footer?.text ??
+                "Inspiración botánica.\nArte en cada cuenta.",
+            )}
           </p>
           <p className="secondary">
             {content.demo
               ? "Exploración visual · contenido e imágenes ilustrativos."
-              : "Versión local de revisión · sin publicación."}
+              : "Versión de revisión · sin publicación comercial."}
+          </p>
+        </div>
+        <div className="footer-legal">
+          <LegalLinks />
+          <p className="secondary">
+            Documentos legales en borrador · datos del negocio por confirmar.
           </p>
         </div>
       </footer>

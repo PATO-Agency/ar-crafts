@@ -3,9 +3,42 @@ import {
   parseSanityOperation,
   parseWebhookDocument,
   tagsForWebhook,
+  tagsForArWebhook,
 } from "./revalidation";
 
 describe("webhook document contract", () => {
+  it.each([
+    "arSite",
+    "arWorkshop",
+    "arWorkshopEdition",
+    "arMaterial",
+    "arInspiration",
+    "arFaq",
+  ])("accepts only AR %s for the active endpoint", (type) => {
+    expect(tagsForArWebhook({ _id: "published-id", _type: type })).toEqual([
+      "ar-crafts",
+    ]);
+    expect(
+      tagsForArWebhook({ _id: "drafts.published-id", _type: type }),
+    ).toBeNull();
+    expect(
+      tagsForArWebhook({ _id: "versions.published-id", _type: type }),
+    ).toBeNull();
+  });
+
+  it.each([
+    "business",
+    "whatsappConversion",
+    "menuCategory",
+    "menuItem",
+    "galleryImage",
+    "promotion",
+    "faq",
+    "testimonial",
+    "unknown",
+  ])("excludes %s from the AR endpoint", (type) => {
+    expect(tagsForArWebhook({ _id: "published-id", _type: type })).toBeNull();
+  });
   it.each([
     ["arSite", "ar-crafts"],
     ["arWorkshop", "ar-crafts"],

@@ -28,11 +28,14 @@ describe("secret scanner without Git", () => {
     );
     expect(result.status).toBe(0);
   });
-  it("rejects a populated token in a template", () => {
-    const result = scan(
-      ".env.example",
-      `SANITY_READ_TOKEN = "${"x".repeat(24)}"`,
-    );
+  it.each([
+    "SANITY_READ_TOKEN",
+    "SANITY_WRITE_TOKEN",
+    "AR_EDITORIAL_AUTOMATION_BYPASS_SECRET",
+    "AR_EDITORIAL_PRESENTATION_BYPASS_SECRET",
+    "VERCEL_AUTOMATION_BYPASS_SECRET",
+  ])("rejects a populated %s in a template", (name) => {
+    const result = scan(".env.example", `${name} = "${"x".repeat(24)}"`);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("potential credential detected");
   });

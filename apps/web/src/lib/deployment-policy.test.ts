@@ -18,6 +18,11 @@ describe("deployment exposure policy", () => {
     "/sitemap.xml",
     "/_next/static/app.js",
     "/ar-crafts/butterfly-jewel.svg",
+    "/legal/terminos-y-condiciones",
+    "/legal/privacidad",
+    "/legal/cookies",
+    "/legal/condiciones-comerciales",
+    "/legal/cookies/",
   ])("serves explicit fixture review path %s remotely", (pathname) => {
     expect(mayServeRequest({ ...remoteDemo, pathname })).toBe(true);
   });
@@ -27,6 +32,10 @@ describe("deployment exposure policy", () => {
     "/api/draft/disable",
     "/api/revalidate",
     "/unexpected",
+    "/legal/unknown",
+    "/legal/cookies/extra",
+    "/work/legal/informe-de-revision.md",
+    "/docs/legal/README.md",
   ])(
     "keeps technical and unknown paths unavailable in remote demo: %s",
     (pathname) => {

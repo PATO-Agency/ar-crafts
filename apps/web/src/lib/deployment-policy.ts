@@ -1,3 +1,5 @@
+import { legalPaths } from "../features/legal/links";
+
 const loopbackHostnames = new Set(["localhost", "127.0.0.1", "::1"]);
 
 export function isRemoteFixtureDemo(
@@ -43,7 +45,7 @@ export function mayServeRequest({
   pathname?: string;
 }): boolean {
   const resolvedVisibility = visibility?.trim() || "internal";
-  // Server configuration enables only the fixture page and its public assets.
+  // Server configuration enables fixture review, legal drafts and public assets.
   // This branch precedes other exposure modes so conflicts fail closed.
   if (remoteDemo !== undefined) {
     if (!isRemoteFixtureDemo(remoteDemo, contentSource, visibility))
@@ -53,6 +55,7 @@ export function mayServeRequest({
       (["/", "/robots.txt", "/sitemap.xml", "/favicon.ico"].includes(
         pathname,
       ) ||
+        legalPaths.includes(pathname.replace(/\/$/, "")) ||
         pathname.startsWith("/_next/") ||
         pathname.startsWith("/ar-crafts/"))
     );

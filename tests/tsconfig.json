@@ -4,6 +4,11 @@
     "e2e/**/*.ts",
     "e2e/**/*.tsx",
     "../tooling/check-secrets.test.ts",
+    "../tooling/ar-crafts-editorial/**/*.ts",
+    "../tooling/ar-crafts-editorial/**/*.tsx",
+    "../tooling/verify-ar-crafts-editorial-flow.ts",
+    "../tooling/run-ar-crafts-editorial.ts",
+    "../tooling/diagnose-ar-crafts-sanity.ts",
     "../playwright.config.ts"
   ]
 }

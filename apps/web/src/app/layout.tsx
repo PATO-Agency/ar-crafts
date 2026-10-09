@@ -4,6 +4,8 @@ import "@fontsource/cormorant-garamond/latin-400-italic.css";
 import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
 import "../features/ar-crafts/theme.css";
+import "../features/legal/legal.css";
+import { CookieNotice } from "../features/legal/cookie-notice";
 export const metadata: Metadata = {
   title: "AR crafts · Adriana Ravello · Demo visual",
   description:
@@ -15,7 +17,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es-PE">
-      <body>{children}</body>
+      <body>
+        {children}
+        <CookieNotice />
+      </body>
     </html>
   );
 }
