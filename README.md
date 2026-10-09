@@ -2,7 +2,7 @@
 
 Landing de AR Crafts, mantenida por PATO Agency. La demo usa fixture; el entorno editorial protegido usa Sanity. Contacto comercial y contenido definitivo siguen pendientes.
 
-Consulta [ENTREGA.md](ENTREGA.md) para reproducir la versión y completar accesos y titularidad. La fuente editorial se mantiene en `codex/editorial`; `main` conserva la demo. Web y Studio comparten este repositorio.
+Consulta [ENTREGA.md](ENTREGA.md) para reproducir la versión y completar accesos y titularidad. La fuente editorial se mantiene en `editorial`; `main` conserva la demo. Web y Studio comparten este repositorio.
 
 ## Desarrollo
 
@@ -53,6 +53,6 @@ Demo: https://ar-crafts-demo.vercel.app. Proyecto dedicado `ar-crafts-demo`, con
 
 El modo remoto admite únicamente la landing y sus recursos. Bloquea las APIs de CMS, preview y revalidación; no activa contacto, servicios editoriales ni indexación. No requiere secretos ni publicar Studio.
 
-El flujo de entrega conecta el proyecto independiente `ar-crafts-editorial` a la rama de producción `codex/editorial`, manteniendo `main` en el proyecto demo. Verificar y registrar el enlace Git y su despliegue antes de declararlos completados. Ambos usan la configuración común neutral; sus variables de proyecto seleccionan la fuente. Editorial conserva protección de Vercel en todos sus despliegues y el webhook `https://ar-crafts-editorial.vercel.app/api/revalidate/sanity`. El preparador `tooling/prepare-vercel-editorial.mjs` y `config/vercel.ar-crafts-editorial.json` conservan el procedimiento manual histórico. Los accesos privados de automatización y Presentation son distintos. El usuario autorizó guardar el segundo en el dataset privado; sus lectores autorizados pueden utilizarlo. No copiar esos valores a documentación o variables públicas. Studio se publica separadamente en Sanity; Git/Vercel no publica el editor ni el contenido del dataset.
+El flujo de entrega conecta el proyecto independiente `ar-crafts-editorial` a la rama de producción `editorial`, manteniendo `main` en el proyecto demo. Verificar y registrar el enlace Git y su despliegue antes de declararlos completados. Ambos usan la configuración común neutral; sus variables de proyecto seleccionan la fuente. Editorial conserva protección de Vercel en todos sus despliegues y el webhook `https://ar-crafts-editorial.vercel.app/api/revalidate/sanity`. El preparador `tooling/prepare-vercel-editorial.mjs` y `config/vercel.ar-crafts-editorial.json` conservan el procedimiento manual histórico. Los accesos privados de automatización y Presentation son distintos. El usuario autorizó guardar el segundo en el dataset privado; sus lectores autorizados pueden utilizarlo. No copiar esos valores a documentación o variables públicas. Studio se publica separadamente en Sanity; Git/Vercel no publica el editor ni el contenido del dataset.
 
 Los cuatro textos canónicos y el índice de `docs/legal` se versionan selectivamente y se sincronizan con el JSON de ejecución mediante `npm run legal:sync` / `npm run legal:check`. Siguen siendo borradores con identidad y jurisdicción pendientes. Los archivos `.env`, informes internos, capturas de auditoría, dependencias y compilados quedan fuera de Git. `.env.example` contiene únicamente variables vacías y valores locales de ejemplo. El lock de dependencias se conserva para instalaciones reproducibles.

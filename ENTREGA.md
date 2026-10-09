@@ -1,17 +1,19 @@
 # Entrega técnica de AR Crafts
 
-Esta guía describe el código y la operación editorial que se entregan para revisión. La rama de fuente es `codex/editorial`; `main` conserva la demo. La entrega no acredita lanzamiento comercial, aprobación legal ni acceso del cliente hasta completar los pendientes indicados aquí.
+Esta guía describe el código y la operación editorial que se entregan para revisión. La rama de fuente es `editorial`; `main` conserva la demo. La entrega no acredita lanzamiento comercial, aprobación legal ni acceso del cliente hasta completar los pendientes indicados aquí.
 
 ## Código y versión entregable
 
-El repositorio [PATO-Agency/ar-crafts](https://github.com/PATO-Agency/ar-crafts/tree/codex/editorial) contiene la web (`apps/web`), Studio (`apps/studio`), contratos compartidos (`packages`), recursos preparados, pruebas y `package-lock.json`. Web y Studio se mantienen en la misma fuente versionada. La versión de esta entrega se identifica con el tag `editorial-2026-10-09`; consultar su commit en GitHub antes de instalar o restaurar.
+El repositorio [PATO-Agency/ar-crafts](https://github.com/PATO-Agency/ar-crafts/tree/editorial) contiene la web (`apps/web`), Studio (`apps/studio`), contratos compartidos (`packages`), recursos preparados, pruebas y `package-lock.json`. Web y Studio se mantienen en la misma fuente versionada. La versión de esta entrega se identifica con el tag `editorial-2026-10-09-r2`; consultar su commit en GitHub antes de instalar o restaurar.
 
-El primer despliegue desde GitHub se verificó el 9 de octubre de 2026: código `c37c5dbb8151fd1d804aac9e1015e054792d54fa`, despliegue Vercel `dpl_EZ4WGzpcutTccqgPfRLJTieuudk6`, estado `READY`, rama `codex/editorial` y [URL editorial protegida](https://ar-crafts-editorial.vercel.app). [GitHub Actions](https://github.com/PATO-Agency/ar-crafts/actions/runs/37892062435) aprobó sincronización legal, lint, tipos, 355 unidades, comprobación de patrones de secretos y builds desde un clon limpio. Localmente pasaron además 32 pruebas focalizadas de Chrome: layout editorial, documentos legales y movimiento. En el despliegue se comprobaron las cuatro páginas legales, el aviso de cookies, el controlador de movimiento con `reduce` emulado y la protección anónima (HTTP 302). Las actualizaciones de documentación posteriores conservan el mismo código de aplicación.
+El primer despliegue desde GitHub se verificó el 9 de octubre de 2026: código `c37c5dbb8151fd1d804aac9e1015e054792d54fa`, despliegue Vercel `dpl_EZ4WGzpcutTccqgPfRLJTieuudk6`, estado `READY`, rama original `codex/editorial` y [URL editorial protegida](https://ar-crafts-editorial.vercel.app). [GitHub Actions](https://github.com/PATO-Agency/ar-crafts/actions/runs/37892062435) aprobó sincronización legal, lint, tipos, 355 unidades, comprobación de patrones de secretos y builds desde un clon limpio. Localmente pasaron además 32 pruebas focalizadas de Chrome: layout editorial, documentos legales y movimiento. En el despliegue se comprobaron las cuatro páginas legales, el aviso de cookies, el controlador de movimiento con `reduce` emulado y la protección anónima (HTTP 302). Las actualizaciones de documentación posteriores conservan el mismo código de aplicación.
+
+El usuario renombró la rama en GitHub a `editorial` el 9 de octubre de 2026. La revisión `editorial-2026-10-09-r2` sincroniza la rama local, CI, las guías y los ajustes de producción/filtro de builds de Vercel. Conserva el mismo código de aplicación y sirve como punto de restauración antes de las próximas mejoras visuales. El tag inicial `editorial-2026-10-09` permanece como registro histórico.
 
 ```sh
-git clone --branch codex/editorial https://github.com/PATO-Agency/ar-crafts.git
+git clone --branch editorial https://github.com/PATO-Agency/ar-crafts.git
 cd ar-crafts
-git checkout editorial-2026-10-09
+git checkout editorial-2026-10-09-r2
 npm ci
 npm run check
 ```
@@ -40,10 +42,10 @@ Por decisión expresa del usuario del 9 de octubre de 2026, las animaciones perm
 
 ## Dos proyectos Vercel, una fuente
 
-| Superficie | Proyecto y rama de producción            | Fuente de contenido | Acceso                                        |
-| ---------- | ---------------------------------------- | ------------------- | --------------------------------------------- |
-| Demo       | `ar-crafts-demo`, `main`                 | Fixture             | Demo interna, sin APIs editoriales            |
-| Editorial  | `ar-crafts-editorial`, `codex/editorial` | Sanity privado      | Protección de Vercel en todos los despliegues |
+| Superficie | Proyecto y rama de producción      | Fuente de contenido | Acceso                                        |
+| ---------- | ---------------------------------- | ------------------- | --------------------------------------------- |
+| Demo       | `ar-crafts-demo`, `main`           | Fixture             | Demo interna, sin APIs editoriales            |
+| Editorial  | `ar-crafts-editorial`, `editorial` | Sanity privado      | Protección de Vercel en todos los despliegues |
 
 Los proyectos usan Root Directory `apps/web`, con acceso a las fuentes compartidas fuera de esa carpeta, Node `22.x`, instalación `cd ../.. && npm ci --no-fund` y build `npm run build` desde `apps/web`. `apps/web/vercel.json` es común y neutral: las variables de cada proyecto determinan `fixture` o `sanity`. El comando de builds ignorados de cada proyecto omite las ramas ajenas a su superficie. Ambos enlaces Git y sus ramas de producción se verificaron el 9 de octubre de 2026. La rama editorial no se fusiona automáticamente a `main`; verificar proyecto, rama, commit y entorno antes de promover un despliegue.
 
@@ -76,7 +78,7 @@ Conservar Markdown y JSON sincronizados en el mismo commit. Los textos son borra
 | ---------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Código                       | Repositorio `PATO-Agency/ar-crafts`                             | Confirmar titular contractual, acceso de la cuenta del cliente y commit/tag entregado |
 | Demo                         | `ar-crafts-demo.vercel.app`                                     | Confirmar responsable de operación y facturación                                      |
-| Web editorial                | `ar-crafts-editorial.vercel.app`, Git `codex/editorial`         | Validar acceso protegido con cuenta propia del cliente                                |
+| Web editorial                | `ar-crafts-editorial.vercel.app`, Git `editorial`               | Validar acceso protegido con cuenta propia del cliente                                |
 | Sanity                       | Proyecto `dbk6sgbx`, dataset privado `ar-crafts-editorial-test` | Confirmar titularidad, plan, cuentas invitadas, roles y backup acordado               |
 | Studio                       | `ar-crafts-editorial-test.sanity.studio`                        | Validar edición/publicación/Presentation con cuenta propia del cliente                |
 | Dominio comercial y contacto | Sin confirmar                                                   | Identidad, dominio, canales, jurisdicción y contenido definitivo                      |

@@ -2,7 +2,7 @@ name: Editorial checks
 
 on:
   push:
-    branches: [codex/editorial]
+    branches: [editorial]
   pull_request:
     branches: [main]
 

@@ -75,7 +75,7 @@ Repite en cada caso **editar → guardar borrador → refrescar Presentation →
 
 ## Límites de esta prueba
 
-Studio ya tiene una superficie alojada en Sanity y puede usarse desde otro dispositivo sin mantener una terminal local. La cuenta propia del cliente, su invitación, sus roles y el acceso protegido a la web editorial siguen pendientes de verificación. No compartir URLs de preview con parámetros privados. La rama `codex/editorial` versiona web y Studio; publicar código en Vercel no publica Studio ni cambia documentos de Sanity. Consulta [ENTREGA.md](../../ENTREGA.md) para el inventario de entrega.
+Studio ya tiene una superficie alojada en Sanity y puede usarse desde otro dispositivo sin mantener una terminal local. La cuenta propia del cliente, su invitación, sus roles y el acceso protegido a la web editorial siguen pendientes de verificación. No compartir URLs de preview con parámetros privados. La rama `editorial` versiona web y Studio; publicar código en Vercel no publica Studio ni cambia documentos de Sanity. Consulta [ENTREGA.md](../../ENTREGA.md) para el inventario de entrega.
 
 La base de ensayo se deja disponible y no se limpia automáticamente. Registro actual como evidencia interna local, no requerido para instalación: `docs/delivery/client-trial-full-2026-10-07/prepared.json`; conserva el registro histórico de la primera prueba solo del hero. Las comprobaciones técnicas no acreditan que hayas revisado o aprobado este contenido. T1/T9 y la aprobación humana editorial/global siguen pendientes.
 
